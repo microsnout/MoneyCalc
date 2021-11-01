@@ -33,31 +33,30 @@ struct CalculatorView: View {
     
     let enterPad = PadSpec(
         rows: 1, cols: 3,
-        keys: [ Key(.enter, "E", size: 2),
+        keys: [ Key(.enter, "Enter", size: 2, fontSize: 15),
                 Key(.back, "🔙")
               ])
     
     let clearPad = PadSpec(
         rows: 1, cols: 1,
-        keys: [ Key(.clear, "#")
+        keys: [ Key(.clear, "CLx", fontSize: 15)
               ])
 
     var body: some View {
         ZStack(alignment: .center) {
-            RoundedRectangle(cornerSize: CGSize(width: 25, height: 25))
+            Rectangle()
                 .fill(Color("Background"))
-                .padding(10)
+                .edgesIgnoringSafeArea( [.bottom] )
             
             ZStack(alignment: .center)
             {
-                Rectangle()
-                    .stroke( Color.gray )
-                    .foregroundColor( Color.clear)
+//                Rectangle()
+//                    .stroke( Color.gray )
+//                    .foregroundColor( Color.clear)
                  
                 VStack(alignment: .leading) {
                     Spacer()
                     Display( buffer: model.buffer )
-                    Divider()
                     VStack( alignment: .leading) {
                         HStack {
                             Keypad( keySpec: keySpec, padSpec: numPad, keyPressHandler: model )

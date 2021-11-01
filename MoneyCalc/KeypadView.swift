@@ -30,11 +30,13 @@ struct Key: Identifiable {
     let id: KeyID
     let ch: String
     let size: Int
+    let fontSize:Double?
     
-    init(_ id: KeyID, _ ch: String, size: Int = 1 ) {
+    init(_ id: KeyID, _ ch: String, size: Int = 1, fontSize: Double? = nil ) {
         self.id = id
         self.ch = ch
         self.size = size
+        self.fontSize = fontSize
     }
 }
 
@@ -42,6 +44,7 @@ struct PadSpec {
     let rows: Int
     let cols: Int
     let keys: [Key]
+    let fontSize = 20.0
 }
 
 struct Keypad: View {
@@ -77,7 +80,7 @@ struct Keypad: View {
                         .shadow(radius: keySpec.radius)
                         .overlay(
                             Text("\(key.ch)")
-                                .font(.title).bold()
+                                .font(.system(size: key.fontSize == nil ? padSpec.fontSize : key.fontSize! ))
                                 .background( keySpec.buttonColor)
                                 .foregroundColor( keySpec.textColor),
                             alignment: .center)

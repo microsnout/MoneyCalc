@@ -8,17 +8,25 @@
 
 /* Begin PBXBuildFile section */
 		0C88849E272B1B61005CFF0C /* MoneyCalcApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C88849D272B1B61005CFF0C /* MoneyCalcApp.swift */; };
-		0C8884A0272B1B61005CFF0C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C88849F272B1B61005CFF0C /* ContentView.swift */; };
+		0C8884A0272B1B61005CFF0C /* CalculatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C88849F272B1B61005CFF0C /* CalculatorView.swift */; };
 		0C8884A2272B1B62005CFF0C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0C8884A1272B1B62005CFF0C /* Assets.xcassets */; };
 		0C8884A5272B1B62005CFF0C /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0C8884A4272B1B62005CFF0C /* Preview Assets.xcassets */; };
+		0C8884AC272B22B8005CFF0C /* CalculatorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C8884AB272B22B8005CFF0C /* CalculatorModel.swift */; };
+		0C8884B0272B25AB005CFF0C /* KeypadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C8884AF272B25AB005CFF0C /* KeypadView.swift */; };
+		0C8884B2272B2658005CFF0C /* DisplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C8884B1272B2658005CFF0C /* DisplayView.swift */; };
+		0C8884B4272D7A9A005CFF0C /* Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C8884B3272D7A99005CFF0C /* Formatting.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0C88849A272B1B61005CFF0C /* MoneyCalc.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MoneyCalc.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0C88849D272B1B61005CFF0C /* MoneyCalcApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoneyCalcApp.swift; sourceTree = "<group>"; };
-		0C88849F272B1B61005CFF0C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		0C88849F272B1B61005CFF0C /* CalculatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorView.swift; sourceTree = "<group>"; };
 		0C8884A1272B1B62005CFF0C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		0C8884A4272B1B62005CFF0C /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		0C8884AB272B22B8005CFF0C /* CalculatorModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorModel.swift; sourceTree = "<group>"; };
+		0C8884AF272B25AB005CFF0C /* KeypadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeypadView.swift; sourceTree = "<group>"; };
+		0C8884B1272B2658005CFF0C /* DisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayView.swift; sourceTree = "<group>"; };
+		0C8884B3272D7A99005CFF0C /* Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -52,7 +60,11 @@
 			isa = PBXGroup;
 			children = (
 				0C88849D272B1B61005CFF0C /* MoneyCalcApp.swift */,
-				0C88849F272B1B61005CFF0C /* ContentView.swift */,
+				0C88849F272B1B61005CFF0C /* CalculatorView.swift */,
+				0C8884AB272B22B8005CFF0C /* CalculatorModel.swift */,
+				0C8884AF272B25AB005CFF0C /* KeypadView.swift */,
+				0C8884B1272B2658005CFF0C /* DisplayView.swift */,
+				0C8884B3272D7A99005CFF0C /* Formatting.swift */,
 				0C8884A1272B1B62005CFF0C /* Assets.xcassets */,
 				0C8884A3272B1B62005CFF0C /* Preview Content */,
 			);
@@ -137,7 +149,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0C8884A0272B1B61005CFF0C /* ContentView.swift in Sources */,
+				0C8884B4272D7A9A005CFF0C /* Formatting.swift in Sources */,
+				0C8884B0272B25AB005CFF0C /* KeypadView.swift in Sources */,
+				0C8884AC272B22B8005CFF0C /* CalculatorModel.swift in Sources */,
+				0C8884A0272B1B61005CFF0C /* CalculatorView.swift in Sources */,
+				0C8884B2272B2658005CFF0C /* DisplayView.swift in Sources */,
 				0C88849E272B1B61005CFF0C /* MoneyCalcApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

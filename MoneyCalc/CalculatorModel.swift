@@ -7,13 +7,73 @@
 
 import Foundation
 
-class CalculatorModel: ObservableObject, KeyPressHandler {
-    // Register stack
-    static let stackPrefixValues = ["X:", "Y:", "Z:", "T:"]
-    static let stackSize = stackPrefixValues.count
-    let regX = 0, regY = 1, regZ = 2, regT = 3
+let stackPrefixValues = ["X:", "Y:", "Z:", "T:"]
 
-    private var registers: [Double] = Array( repeating: 0.0, count: stackSize)
+let regX = 0, regY = 1, regZ = 2, regT = 3, stackSize = 4
+
+struct CalcState {
+    var stack: [Double] = Array( repeating: 0.0, count: stackSize)
+    var lastX: Double = 0.0
+    var noLift: Bool = false
+    
+    var X: Double {
+        get { stack[regX] }
+        set { stack[regX] = newValue }
+    }
+    
+    var Y: Double {
+        get { stack[regY] }
+        set { stack[regY] = newValue }
+    }
+    
+    var Z: Double {
+        get { stack[regZ] }
+        set { stack[regZ] = newValue }
+    }
+    
+    var T: Double {
+        get { stack[regT] }
+        set { stack[regT] = newValue }
+    }
+    
+    mutating func stackDrop(_ by: Int = 1 ) {
+        for rx in regX ..< stackSize-1 {
+            self.stack[rx] = self.stack[rx+1]
+        }
+    }
+
+    mutating func stackLift(_ by: Int = 1 ) {
+        for rx in stride( from: stackSize-1, to: regX, by: -1 ) {
+            self.stack[rx] = self.stack[rx-1]
+        }
+    }
+}
+
+struct UndoStack {
+    private let maxItems = 5
+    private var storage = [CalcState]()
+    
+    mutating func push(_ state: CalcState ) {
+        storage.append(state)
+        if storage.count > maxItems {
+            storage.removeFirst()
+        }
+    }
+    
+    mutating func pop() -> CalcState? {
+        storage.popLast()
+    }
+}
+
+protocol StateOperator {
+    func transition(_ s0: CalcState ) -> CalcState
+}
+
+
+class CalculatorModel: ObservableObject, KeyPressHandler {
+    // Current Calculator State
+    private var state = CalcState()
+    private var undoStack = UndoStack()
 
     // Display window into register stack
     static let displayRows = 4
@@ -22,47 +82,87 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     @Published var buffer: [DisplayRow] = stackPrefixValues.prefix(displayRows).reversed().map {
         DisplayRow( prefix: $0, register: 0.0.fixedFormat)
     }
+
+    // Numeric entry occurs on X register
+    private var enterMode: Bool = false;
+    private var enterText: String = ""
+    
+    private let entryKeys:Set<KeyID> = [.key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9, .dot, .back]
     
     func bufferIndex(_ stackIndex: Int ) -> Int {
         return CalculatorModel.displayRows - stackIndex - 1
     }
     
-    func getReg(_ index: Int ) -> Double {
-        return registers[index]
+    func updateDisplay() {
+        for rx in (enterMode ? regY : regX) ... regT {
+                buffer[ bufferIndex(rx) ].register = state.stack[rx].fixedFormat
+        }
+        if enterMode {
+            buffer[ bufferIndex(regX)].register = "\(enterText)_"
+        }
     }
     
-    func putReg(_ index: Int, _ newValue: Double ) {
-        registers[index] = newValue
+    class UnaryOp: StateOperator {
+        let function: (Double) -> Double
         
-        if index < CalculatorModel.displayRows {
-            buffer[ bufferIndex(index)].register = newValue.fixedFormat
+        init(_ function: @escaping (Double) -> Double ) {
+            self.function = function
+        }
+        
+        func transition(_ s0: CalcState ) -> CalcState {
+            var s1: CalcState = s0
+            s1.X = function( s0.X )
+            return s1
         }
     }
     
-    func copyReg(_ from: Int, to: Int ) {
-        putReg(to,  getReg(from))
-    }
-    
-    func clearReg(_ index: Int ) {
-        putReg(index, 0.0)
-    }
-    
-    func stackLift() {
-        for rx in stride( from: CalculatorModel.stackSize-1, to: regX, by: -1 ) {
-            copyReg(rx-1, to: rx)
+    class BinaryOp: StateOperator {
+        let function: (Double, Double) -> Double
+        
+        init(_ function: @escaping (Double, Double) -> Double ) {
+            self.function = function
+        }
+        
+        func transition(_ s0: CalcState ) -> CalcState {
+            var s1: CalcState = s0
+            s1.stackDrop()
+            s1.X = function( s0.Y, s0.X )
+            return s1
         }
     }
     
-    func stackDrop() {
-        for rx in regX ..< CalculatorModel.stackSize-1 {
-            copyReg(rx+1, to: rx)
+    class CustomOp: StateOperator {
+        let block: (CalcState) -> CalcState
+        
+        init(_ block: @escaping (CalcState) -> CalcState ) {
+            self.block = block
+        }
+        
+        func transition(_ s0: CalcState ) -> CalcState {
+            return block(s0)
         }
     }
     
-    var enterMode: Bool = false;
-    var enterText: String = ""
-    
-    private let entryKeys:Set<KeyID> = [.key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9, .dot, .back]
+    let opTable: [KeyID: StateOperator] = [
+        .plus:      BinaryOp( + ),
+        .minus:     BinaryOp( - ),
+        .times:     BinaryOp( * ),
+        .divide:    BinaryOp( / ),
+        .enter:
+            CustomOp { s0 in
+                var s1 = s0
+                s1.stackLift()
+                s1.noLift = true
+                return s1
+            },
+        .clear:
+            CustomOp { s0 in
+                var s1 = s0
+                s1.X = 0.0
+                s1.noLift = true
+                return s1
+            }
+    ]
     
     func keyPress( id: KeyID) {
         
@@ -77,74 +177,58 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                     
                     if enterText.isEmpty {
                         // Clear X, exit entry mode, no further actions
-                        clearReg(regX)
+                        state.stack[regX] = 0.0
+                        state.noLift = true
                         enterMode = false
-                        return
                     }
                 }
                 else {
                     enterText.append( String( id.rawValue))
                 }
-                buffer[ bufferIndex(regX)].register = "\(enterText)_"
+                
+                updateDisplay()
                 return
             }
-            else {
-                putReg(regX, Double(enterText)! )
-                enterMode = false
-                // Fallthrough to switch
-            }
+                
+            state.stack[regX] = Double(enterText)!
+            enterMode = false
+            // Fallthrough to switch
         }
         
         switch id {
         case .key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9:
             enterText = String(id.rawValue)
-            stackLift()
-            buffer[ bufferIndex(regX)].register = "\(enterText)_"
             enterMode = true
+            if !state.noLift {
+                state.stackLift()
+            }
+            state .noLift = false
             break
             
         case .dot:
             enterText = "0."
             enterMode = true
-            stackLift()
-            buffer[ bufferIndex(regX)].register = "\(enterText)_"
+            if !state.noLift {
+                state.stackLift()
+            }
+            state .noLift = false
             break
             
-        case .enter:
-            stackLift()
-            break
-            
-        case .clear:
-            clearReg(regX)
-            break
-            
-        case .plus:
-            let result = getReg(regX) + getReg(regY)
-            stackDrop()
-            putReg(regX, result)
-            break
-            
-        case .minus:
-            let result = getReg(regY) - getReg(regX)
-            stackDrop()
-            putReg(regX, result)
-            break
-            
-        case .times:
-            let result = getReg(regX) * getReg(regY)
-            stackDrop()
-            putReg(regX, result)
-            break
-            
-        case .divide:
-            let result = getReg(regY) / getReg(regX)
-            stackDrop()
-            putReg(regX, result)
+        case .back:
+            if let lastState = undoStack.pop() {
+                state = lastState
+            }
             break
             
         default:
+            if let op = opTable[id] {
+                let newState = op.transition( state )
+                undoStack.push(state)
+                state = newState
+            }
             break
         }
+        updateDisplay()
     }
 }
 

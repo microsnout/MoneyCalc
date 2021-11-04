@@ -50,7 +50,7 @@ struct CalcState {
 }
 
 struct UndoStack {
-    private let maxItems = 5
+    private let maxItems = 12
     private var storage = [CalcState]()
     
     mutating func push(_ state: CalcState ) {
@@ -177,7 +177,6 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                     
                     if enterText.isEmpty {
                         // Clear X, exit entry mode, no further actions
-                        state.stack[regX] = 0.0
                         state.noLift = true
                         enterMode = false
                     }

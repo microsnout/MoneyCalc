@@ -41,6 +41,27 @@ struct CalculatorView: View {
         rows: 1, cols: 1,
         keys: [ Key(.clear, "CLx", fontSize: 15)
               ])
+    
+    // **************************
+    
+    let skSpec = KeySpec(
+        width: 50, height: 30,
+        radius: 10, spacing: 10,
+        buttonColor: Color("KeyColor"), textColor: Color("KeyText"))
+    
+    let skRowSpec = RowSpec (
+        keys: [ SoftKey(.sk0, "BTC"),
+                SoftKey(.sk1, "ETH"),
+                SoftKey(.sk2, "SOL"),
+                SoftKey(.sk3, "ADA"),
+                SoftKey(.sk4, "DOT"),
+                SoftKey(.sk5, "XRP")
+              ],
+        fontSize: 15.0,
+        caption: "Crypto"
+    )
+
+    // **************************
 
     var body: some View {
         ZStack(alignment: .center) {
@@ -48,7 +69,7 @@ struct CalculatorView: View {
                 .fill(Color("Background"))
                 .edgesIgnoringSafeArea( [.bottom] )
             
-            ZStack(alignment: .center)
+            ZStack
             {
 //                Rectangle()
 //                    .stroke( Color.gray )
@@ -57,6 +78,8 @@ struct CalculatorView: View {
                 VStack(alignment: .leading) {
                     Spacer()
                     Display( buffer: model.buffer )
+                    SoftKeyRow( keySpec: skSpec, rowSpec: skRowSpec, keyPressHandler: model )
+                        .padding( .vertical, 5 )
                     VStack( alignment: .leading) {
                         HStack {
                             Keypad( keySpec: keySpec, padSpec: numPad, keyPressHandler: model )

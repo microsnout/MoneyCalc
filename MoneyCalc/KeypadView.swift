@@ -7,8 +7,14 @@
 
 import SwiftUI
 
+typealias KeyID = Int
+typealias PadID = Int
+typealias RowID = Int
+
+typealias  KeyEvent = ( pad: PadID, key: KeyID )
+
 protocol KeyPressHandler {
-    func keyPress( id: KeyID )
+    func keyPress(_ event: KeyEvent )
 }
 
 struct KeySpec {
@@ -20,20 +26,13 @@ struct KeySpec {
     var textColor: Color
 }
 
-public enum KeyID: Int {
-    case key0 = 0, key1, key2, key3, key4, key5, key6, key7, key8, key9
-    case plus, minus, times, divide
-    case dot, enter, clear, equal, back, blank
-    case sk0, sk1, sk2, sk3, sk4, sk5, sk6, sk7, sk8, sk9
-}
-
 struct Key: Identifiable {
     let id: KeyID
     let ch: String
     let size: Int
     let fontSize:Double?
     
-    init(_ id: KeyID, _ ch: String, size: Int = 1, fontSize: Double? = nil ) {
+    init(_ id: Int, _ ch: String, size: Int = 1, fontSize: Double? = nil ) {
         self.id = id
         self.ch = ch
         self.size = size
@@ -42,6 +41,7 @@ struct Key: Identifiable {
 }
 
 struct PadSpec {
+    let id: PadID
     let rows: Int
     let cols: Int
     let keys: [Key]
@@ -67,7 +67,7 @@ struct Keypad: View {
         ) {
             ForEach(padSpec.keys, id: \.id) { key in
                 Button( action: {
-                    keyPressHandler.keyPress( id: key.id )
+                    keyPressHandler.keyPress( (padSpec.id, key.id) )
                 })
                 {
                     Rectangle()
@@ -101,13 +101,14 @@ struct SoftKey: Identifiable {
     let id: KeyID
     let ch: String
     
-    init(_ id: KeyID, _ ch: String ) {
+    init(_ id: Int, _ ch: String ) {
         self.id = id
         self.ch = ch
     }
 }
 
 struct RowSpec {
+    let id: RowID
     let keys: [SoftKey]
     let fontSize: Double
     let caption: String
@@ -124,7 +125,7 @@ struct SoftKeyRow: View {
         HStack {
             ForEach(rowSpec.keys, id: \.id) { key in
                 Button( action: {
-                    keyPressHandler.keyPress( id: key.id )
+                    keyPressHandler.keyPress( (rowSpec.id, key.id) )
                 })
                 {
                     Spacer()

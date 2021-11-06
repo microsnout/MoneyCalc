@@ -20,7 +20,7 @@ struct MonoText: View {
         HStack(spacing: 0) {
             ForEach(0..<self.content.count, id: \.self) { index in
                 Text("\(self.content[self.content.index(self.content.startIndex, offsetBy: index)].description)")
-                    .frame(width: self.charWidth)
+                    .foregroundColor(Color.gray).frame(width: self.charWidth)
             }
         }
     }
@@ -55,7 +55,7 @@ struct Display: View {
                         MonoText(
                             String( buffer[index].register ),
                             charWidth: colWidth)
-                        Text( buffer[index].suffix).bold().foregroundColor(Color.black)
+                        Text( buffer[index].suffix).font(.system(size: 12.0)).bold().foregroundColor(Color.black)
                     }
                 }
             }

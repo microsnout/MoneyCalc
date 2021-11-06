@@ -11,14 +11,55 @@ let stackPrefixValues = ["X:", "Y:", "Z:", "T:"]
 
 let regX = 0, regY = 1, regZ = 2, regT = 3, stackSize = 4
 
+enum TypeClass: Int {
+    case untyped = 0, percentage, fiat, crypto, shares, time, compound
+}
+
+typealias TypeIndex = Int
+
+typealias TypeTag = ( class: TypeClass, index: TypeIndex)
+
+protocol TypeRecord {
+    var suffix: String { get }
+}
+
+class TypeUntyped: TypeRecord {
+    var suffix: String { "" }
+}
+
+class TypePercentage: TypeRecord {
+    var suffix: String { "%" }
+}
+
+ func getRecord(_ tag: TypeTag ) -> TypeRecord {
+    
+    switch tag.class {
+    case .untyped:
+        return TypeUntyped()
+    case .percentage:
+        return TypePercentage()
+    case .crypto:
+        return TypeCrypto.getRecord(tag.index)
+    default:
+        return TypeUntyped()
+    }
+}
+
+
 struct CalcState {
     var stack: [Double] = Array( repeating: 0.0, count: stackSize)
+    var tags: [TypeTag] = Array( repeating: (.untyped, 0), count: stackSize)
     var lastX: Double = 0.0
     var noLift: Bool = false
     
     var X: Double {
         get { stack[regX] }
         set { stack[regX] = newValue }
+    }
+    
+    var Xt: TypeTag {
+        get { tags[regX] }
+        set { tags[regX] = newValue }
     }
     
     var Y: Double {
@@ -39,12 +80,14 @@ struct CalcState {
     mutating func stackDrop(_ by: Int = 1 ) {
         for rx in regX ..< stackSize-1 {
             self.stack[rx] = self.stack[rx+1]
+            self.tags[rx] = self.tags[rx+1]
         }
     }
 
     mutating func stackLift(_ by: Int = 1 ) {
         for rx in stride( from: stackSize-1, to: regX, by: -1 ) {
             self.stack[rx] = self.stack[rx-1]
+            self.tags[rx] = self.tags[rx-1]
         }
     }
 }
@@ -72,8 +115,8 @@ protocol StateOperator {
 
 class CalculatorModel: ObservableObject, KeyPressHandler {
     // Current Calculator State
-    private var state = CalcState()
-    private var undoStack = UndoStack()
+    var state = CalcState()
+    var undoStack = UndoStack()
 
     // Display window into register stack
     static let displayRows = 4
@@ -87,7 +130,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     private var enterMode: Bool = false;
     private var enterText: String = ""
     
-    private let entryKeys:Set<KeyID> = [.key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9, .dot, .back]
+    private let entryKeys:Set<Int> = [key0, key1, key2, key3, key4, key5, key6, key7, key8, key9, dot, back]
     
     func bufferIndex(_ stackIndex: Int ) -> Int {
         return CalculatorModel.displayRows - stackIndex - 1
@@ -95,10 +138,14 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     
     func updateDisplay() {
         for rx in (enterMode ? regY : regX) ... regT {
-                buffer[ bufferIndex(rx) ].register = state.stack[rx].fixedFormat
+            buffer[ bufferIndex(rx) ].register = state.stack[rx].fixedFormat
+            
+            let typeRec = getRecord( state.tags[rx] )
+            buffer[ bufferIndex(rx) ].suffix = typeRec.suffix
         }
         if enterMode {
             buffer[ bufferIndex(regX)].register = "\(enterText)_"
+            buffer[ bufferIndex(regX)].suffix = ""
         }
     }
     
@@ -110,7 +157,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         }
         
         func transition(_ s0: CalcState ) -> CalcState {
-            var s1: CalcState = s0
+            var s1 = s0
             s1.X = function( s0.X )
             return s1
         }
@@ -124,7 +171,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         }
         
         func transition(_ s0: CalcState ) -> CalcState {
-            var s1: CalcState = s0
+            var s1 = s0
             s1.stackDrop()
             s1.X = function( s0.Y, s0.X )
             return s1
@@ -144,35 +191,37 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     }
     
     let opTable: [KeyID: StateOperator] = [
-        .plus:      BinaryOp( + ),
-        .minus:     BinaryOp( - ),
-        .times:     BinaryOp( * ),
-        .divide:    BinaryOp( / ),
-        .enter:
+        plus:      BinaryOp( + ),
+        minus:     BinaryOp( - ),
+        times:     BinaryOp( * ),
+        divide:    BinaryOp( / ),
+        enter:
             CustomOp { s0 in
                 var s1 = s0
                 s1.stackLift()
                 s1.noLift = true
                 return s1
             },
-        .clear:
+        clear:
             CustomOp { s0 in
                 var s1 = s0
                 s1.X = 0.0
+                s1.Xt = (.untyped, 0)
                 s1.noLift = true
                 return s1
             }
     ]
     
-    func keyPress( id: KeyID) {
+    func keyPress(_ event: KeyEvent) {
+        let (padID, keyID) = event
         
         if enterMode {
-            if entryKeys.contains(id) {
-                if id == .dot {
+            if entryKeys.contains(keyID) {
+                if keyID == dot {
                     // Decimal is a no-op if one has already been entered
                     if !enterText.contains(".") { enterText.append(".")}
                 }
-                else if id == .back {
+                else if keyID == back {
                     enterText.removeLast()
                     
                     if enterText.isEmpty {
@@ -182,7 +231,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                     }
                 }
                 else {
-                    enterText.append( String( id.rawValue))
+                    enterText.append( String(keyID))
                 }
                 
                 updateDisplay()
@@ -194,9 +243,15 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             // Fallthrough to switch
         }
         
-        switch id {
-        case .key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9:
-            enterText = String(id.rawValue)
+        if padID == rowCrypto {
+            cryptoKeyPress( keyID )
+            updateDisplay()
+            return
+        }
+        
+        switch keyID {
+        case key0, key1, key2, key3, key4, key5, key6, key7, key8, key9:
+            enterText = String(keyID)
             enterMode = true
             if !state.noLift {
                 state.stackLift()
@@ -204,7 +259,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             state .noLift = false
             break
             
-        case .dot:
+        case dot:
             enterText = "0."
             enterMode = true
             if !state.noLift {
@@ -213,14 +268,14 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             state .noLift = false
             break
             
-        case .back:
+        case back:
             if let lastState = undoStack.pop() {
                 state = lastState
             }
             break
             
         default:
-            if let op = opTable[id] {
+            if let op = opTable[keyID] {
                 let newState = op.transition( state )
                 undoStack.push(state)
                 state = newState

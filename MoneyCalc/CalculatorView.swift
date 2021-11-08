@@ -17,7 +17,7 @@ let sk0 = 30, sk1 = 31, sk2 = 32, sk3 = 33, sk4 = 34, sk5 = 35, sk6 = 36, sk7 = 
 
 let padDigits = 0, padOp = 1, padEnter = 2, padClear = 3
 
-let rowCrypto = 10
+let rowCrypto = 10, rowFiat = 11
 
 
 struct CalculatorView: View {
@@ -79,6 +79,19 @@ struct CalculatorView: View {
         caption: "Crypto"
     )
 
+    let fiatRowSpec = RowSpec (
+        id: rowFiat,
+        keys: [ SoftKey(sk0, "USD"),
+                SoftKey(sk1, "CAD"),
+                SoftKey(sk2, "EUR"),
+                SoftKey(sk3, "GBP"),
+                SoftKey(sk4, "AUD"),
+                SoftKey(sk5, "JPY")
+              ],
+        fontSize: 15.0,
+        caption: "Fiat"
+    )
+
     // **************************
 
     var body: some View {
@@ -97,6 +110,8 @@ struct CalculatorView: View {
                     Spacer()
                     Display( buffer: model.buffer )
                     SoftKeyRow( keySpec: skSpec, rowSpec: cryptoRowSpec, keyPressHandler: model )
+                        .padding( .vertical, 5 )
+                    SoftKeyRow( keySpec: skSpec, rowSpec: fiatRowSpec, keyPressHandler: model )
                         .padding( .vertical, 5 )
                     VStack( alignment: .leading) {
                         HStack {

@@ -7,7 +7,7 @@
 
 import Foundation
 
-let stackPrefixValues = ["X:", "Y:", "Z:", "T:"]
+let stackPrefixValues = ["X", "Y", "Z", "T"]
 
 let regX = 0, regY = 1, regZ = 2, regT = 3, stackSize = 4
 
@@ -38,8 +38,13 @@ class TypePercentage: TypeRecord {
         return TypeUntyped()
     case .percentage:
         return TypePercentage()
-    case .crypto:
-        return TypeCrypto.getRecord(tag.index)
+        
+    case .crypto, .fiat:
+        if let rec = TypeFinancial.getRecord(tag) {
+            return rec
+        }
+        return TypeUntyped()
+
     default:
         return TypeUntyped()
     }
@@ -239,12 +244,18 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             }
                 
             state.stack[regX] = Double(enterText)!
+            state.tags[regX] = (.untyped, 0)
             enterMode = false
             // Fallthrough to switch
         }
         
         if padID == rowCrypto {
-            cryptoKeyPress( keyID )
+            financialKeyPress( (.crypto, keyID - sk0) )
+            updateDisplay()
+            return
+        }
+        else if padID == rowFiat {
+            financialKeyPress( (.fiat, keyID - sk0) )
             updateDisplay()
             return
         }

@@ -51,12 +51,12 @@ struct Display: View {
             VStack( alignment: .leading, spacing: 5) {
                 ForEach (0..<rows, id: \.self) { index in
                     HStack() {
-                        Text( buffer[index].prefix).bold().foregroundColor(Color.blue)
+                        Text( buffer[index].prefix).font(.system(size: 14.0)).bold().foregroundColor(Color("Frame"))
                         MonoText(
                             String( buffer[index].register ),
                             charWidth: colWidth)
                         Text( buffer[index].suffix).font(.system(size: 12.0)).bold().foregroundColor(Color.black)
-                    }
+                    }.padding(.leading, 10)
                 }
             }
             .frame( height: rowHeight*Double(rows) )

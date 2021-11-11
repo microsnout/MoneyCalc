@@ -112,6 +112,14 @@ struct CalcState {
             self.tags[rx] = self.tags[rx-1]
         }
     }
+
+    mutating func stackRoll() {
+        let xtv = self.Xtv
+        stackDrop()
+        let last = stackSize-1
+        self.stack[last] = xtv.reg
+        self.tags[last] = xtv.tag
+    }
 }
 
 struct UndoStack {
@@ -152,7 +160,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     private var enterMode: Bool = false;
     private var enterText: String = ""
     
-    private let entryKeys:Set<Int> = [key0, key1, key2, key3, key4, key5, key6, key7, key8, key9, dot, back]
+    private let entryKeys:Set<Int> = [key0, key1, key2, key3, key4, key5, key6, key7, key8, key9, dot, sign, back]
     
     func bufferIndex(_ stackIndex: Int ) -> Int {
         return CalculatorModel.displayRows - stackIndex - 1
@@ -293,9 +301,23 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         clear:
             CustomOp { s0 in
                 var s1 = s0
-                s1.X = 0.0
-                s1.Xt = (.untyped, 0)
+                s1.Xtv = ((.untyped, 0), 0.0)
                 s1.noLift = true
+                return s1
+            },
+        
+        roll:
+            CustomOp { s0 in
+                var s1 = s0
+                s1.stackRoll()
+                return s1
+            },
+        
+        xy:
+            CustomOp { s0 in
+                var s1 = s0
+                s1.Ytv = s0.Xtv
+                s1.Xtv = s0.Ytv
                 return s1
             }
     ]
@@ -308,6 +330,14 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                 if keyID == dot {
                     // Decimal is a no-op if one has already been entered
                     if !enterText.contains(".") { enterText.append(".")}
+                }
+                else if keyID == sign {
+                    if enterText.starts( with: "-") {
+                        enterText.removeFirst()
+                    }
+                    else {
+                        enterText.insert( "-", at: enterText.startIndex )
+                    }
                 }
                 else if keyID == back {
                     enterText.removeLast()

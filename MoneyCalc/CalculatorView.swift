@@ -11,9 +11,11 @@ let key0 = 0, key1 = 1, key2 = 2, key3 = 3, key4 = 4, key5 = 5, key6 = 6, key7 =
 
 let plus = 10, minus = 11, times = 12, divide = 13
 
-let dot = 20, enter = 21, clear = 22, equal = 23, back = 24, blank = 25
+let dot = 20, enter = 21, clear = 22, equal = 23, back = 24, sign = 25
 
-let sk0 = 30, sk1 = 31, sk2 = 32, sk3 = 33, sk4 = 34, sk5 = 35, sk6 = 36, sk7 = 37, sk8 = 38, sk9 = 39
+let fixL = 30, fixR = 31, roll = 32, xy = 33, percent = 34, lastx = 35
+
+let sk0 = 50, sk1 = 51, sk2 = 52, sk3 = 53, sk4 = 54, sk5 = 55, sk6 = 56, sk7 = 57, sk8 = 58, sk9 = 59
 
 let padDigits = 0, padOp = 1, padEnter = 2, padClear = 3
 
@@ -34,29 +36,29 @@ struct CalculatorView: View {
         keys: [ Key(key7, "7"), Key(key8, "8"), Key(key9, "9"),
                 Key(key4, "4"), Key(key5, "5"), Key(key6, "6"),
                 Key(key1, "1"), Key(key2, "2"), Key(key3, "3"),
-                Key(key0, "0"), Key(dot, ".")
+                Key(key0, "0"), Key(dot, "."),  Key(sign, "+/-", fontSize: 15)
               ])
     
     let opPad = PadSpec(
         id: padOp,
-        rows: 4, cols: 1,
-        keys: [ Key(divide, "÷"),
-                Key(times, "×"),
-                Key(minus, "−"),
-                Key(plus,  "+")
+        rows: 4, cols: 2,
+        keys: [ Key(divide, "÷"), Key(fixL, ".00\u{2190}", fontSize: 12),
+                Key(times, "×"),  Key(fixR, ".00\u{2192}", fontSize: 12),
+                Key(minus, "−"),  Key(xy, "X\u{21c6}Y", fontSize: 12),
+                Key(plus,  "+"),  Key(roll, "R\u{2193}", fontSize: 12)
               ])
     
     let enterPad = PadSpec(
         id: padEnter,
         rows: 1, cols: 3,
         keys: [ Key(enter, "Enter", size: 2, fontSize: 15),
-                Key(back, "🔙")
+                Key(back, "BACK", fontSize: 10)
               ])
     
     let clearPad = PadSpec(
         id: padClear,
-        rows: 1, cols: 1,
-        keys: [ Key(clear, "CLx", fontSize: 15)
+        rows: 1, cols: 2,
+        keys: [ Key(clear, "CLx", fontSize: 12), Key(lastx, "LASTx", fontSize: 10)
               ])
     
     // **************************

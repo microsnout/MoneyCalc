@@ -19,6 +19,8 @@ typealias TypeIndex = Int
 
 typealias TypeTag = ( class: TypeClass, index: TypeIndex)
 
+typealias TaggedValue = (tag: TypeTag, reg: Double )
+
 protocol TypeRecord {
     var suffix: String { get }
 }
@@ -67,9 +69,24 @@ struct CalcState {
         set { tags[regX] = newValue }
     }
     
+    var Xtv: TaggedValue {
+        get { (self.Xt, self.X) }
+        set { self.Xt = newValue.tag; self.X = newValue.reg }
+    }
+    
     var Y: Double {
         get { stack[regY] }
         set { stack[regY] = newValue }
+    }
+    
+    var Yt: TypeTag {
+        get { tags[regY] }
+        set { tags[regY] = newValue }
+    }
+    
+    var Ytv: TaggedValue {
+        get { (self.Yt, self.Y) }
+        set { self.Yt = newValue.tag; self.Y = newValue.reg }
     }
     
     var Z: Double {
@@ -114,7 +131,7 @@ struct UndoStack {
 }
 
 protocol StateOperator {
-    func transition(_ s0: CalcState ) -> CalcState
+    func transition(_ s0: CalcState ) -> CalcState?
 }
 
 
@@ -161,21 +178,60 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             self.function = function
         }
         
-        func transition(_ s0: CalcState ) -> CalcState {
+        func transition(_ s0: CalcState ) -> CalcState? {
             var s1 = s0
             s1.X = function( s0.X )
             return s1
         }
     }
     
-    class BinaryOp: StateOperator {
+    class BinaryOpAdditive: StateOperator {
         let function: (Double, Double) -> Double
         
         init(_ function: @escaping (Double, Double) -> Double ) {
             self.function = function
         }
         
-        func transition(_ s0: CalcState ) -> CalcState {
+        func transition(_ s0: CalcState ) -> CalcState? {
+            if s0.Yt.class == .untyped && s0.Xt.class != .untyped {
+                // Cannot convert X operand back to untyped
+                return nil
+            }
+            
+            // Result will be same type as Y
+            var s1 = s0
+            s1.stackDrop()
+
+            if s0.Yt == s0.Xt {
+                // Identical types
+                s1.X = function( s0.Y, s0.X )
+            }
+            else if
+                let xType = TypeFinancial.getRecord( s0.Xt ),
+                let yType = TypeFinancial.getRecord( s0.Yt ) {
+                    // Convert X value to type Y
+                    s1.X = function( s0.Y, s0.X * xType.usd / yType.usd )
+                }
+            else {
+                return nil
+            }
+            return s1
+        }
+    }
+    
+    class BinaryOpMultiplicative: StateOperator {
+        let function: (Double, Double) -> Double
+        
+        init(_ function: @escaping (Double, Double) -> Double ) {
+            self.function = function
+        }
+        
+        func transition(_ s0: CalcState ) -> CalcState? {
+            guard s0.Xt.class == .untyped else {
+                // X operand must be an untyped value
+                return nil
+            }
+            // Ressult will be same type as Y
             var s1 = s0
             s1.stackDrop()
             s1.X = function( s0.Y, s0.X )
@@ -184,22 +240,49 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     }
     
     class CustomOp: StateOperator {
-        let block: (CalcState) -> CalcState
+        let block: (CalcState) -> CalcState?
         
-        init(_ block: @escaping (CalcState) -> CalcState ) {
+        init(_ block: @escaping (CalcState) -> CalcState? ) {
             self.block = block
         }
         
-        func transition(_ s0: CalcState ) -> CalcState {
+        func transition(_ s0: CalcState ) -> CalcState? {
             return block(s0)
         }
     }
     
     let opTable: [KeyID: StateOperator] = [
-        plus:      BinaryOp( + ),
-        minus:     BinaryOp( - ),
-        times:     BinaryOp( * ),
-        divide:    BinaryOp( / ),
+        plus:      BinaryOpAdditive( + ),
+        minus:     BinaryOpAdditive( - ),
+        times:     BinaryOpMultiplicative( * ),
+        
+        divide:
+            CustomOp { s0 in
+                var s1 = s0
+                s1.stackDrop()
+                
+                if s0.Yt == s0.Xt {
+                    // Identical types produces untyped result
+                    s1.X = s0.Y / s0.X
+                    s1.Xt = (.untyped, 0)
+                }
+                else if s0.Xt.class == .untyped {
+                    s1.X = s0.Y / s0.X
+                    s1.Xt = s0.Yt
+                }
+                else if
+                    let xType = TypeFinancial.getRecord( s0.Xt ),
+                    let yType = TypeFinancial.getRecord( s0.Yt ) {
+                        // Convert X value to type Y
+                        s1.X = s0.Y / (s0.X * xType.usd / yType.usd)
+                        s1.Xt = (.untyped, 0)
+                }
+                else {
+                    return nil
+                }
+                return s1
+            },
+        
         enter:
             CustomOp { s0 in
                 var s1 = s0
@@ -287,9 +370,11 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             
         default:
             if let op = opTable[keyID] {
-                let newState = op.transition( state )
-                undoStack.push(state)
-                state = newState
+                if let newState = op.transition( state ) {
+                    undoStack.push(state)
+                    state = newState
+                }
+                // else no-op as there was no new state
             }
             break
         }

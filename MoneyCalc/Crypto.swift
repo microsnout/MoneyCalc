@@ -11,10 +11,12 @@ class TypeFinancial: TypeRecord {
     
     let suffix: String
     var usd: Double
+    var digits: Int
     
-    init(_ suffix: String, _ usd: Double ) {
+    init(_ suffix: String, usd: Double, digits: Int ) {
         self.suffix = suffix
         self.usd = usd
+        self.digits = digits
     }
 
     static func getRecord(_ tag: TypeTag ) -> TypeFinancial? {
@@ -35,16 +37,16 @@ class TypeFinancial: TypeRecord {
 class TypeCrypto: TypeFinancial {
     
     static let cryptoTable: [TypeCrypto] = [
-        TypeCrypto("BTC" , 66000.00 ),
-        TypeCrypto("ETH" ,  5900.00 ),
-        TypeCrypto("SOL" ,   244.00 ),
-        TypeCrypto("ADA" ,     2.05 ),
-        TypeCrypto("DOT" ,    53.00 ),
-        TypeCrypto("LINK",    34.00 )
+        TypeCrypto("BTC" , usd: 66000.00, digits: 8 ),
+        TypeCrypto("ETH" , usd:  5900.00, digits: 8 ),
+        TypeCrypto("SOL" , usd:   244.00, digits: 8 ),
+        TypeCrypto("ADA" , usd:     2.05, digits: 4 ),
+        TypeCrypto("DOT" , usd:    53.00, digits: 4 ),
+        TypeCrypto("LINK", usd:    34.00, digits: 4 )
     ]
 
-    override init(_ suffix: String, _ usd: Double ) {
-        super.init( suffix, usd )
+    override init(_ suffix: String, usd: Double, digits: Int ) {
+        super.init( suffix, usd: usd, digits: digits )
     }
     
     static func getRecord(_ index: Int ) -> TypeCrypto? {
@@ -60,16 +62,16 @@ class TypeCrypto: TypeFinancial {
 class TypeFiat: TypeFinancial {
     
     static let fiatTable: [TypeFiat] = [
-        TypeFiat("USD" ,  1.00 ),
-        TypeFiat("CAD" ,  0.80 ),
-        TypeFiat("EUR" ,  1.16 ),
-        TypeFiat("GBP" ,  1.35 ),
-        TypeFiat("AUD" ,  0.74 ),
-        TypeFiat("JPY" ,  0.0088 )
+        TypeFiat("USD" ,  usd: 1.00, digits: 2 ),
+        TypeFiat("CAD" ,  usd: 0.80, digits: 2 ),
+        TypeFiat("EUR" ,  usd: 1.16, digits: 2 ),
+        TypeFiat("GBP" ,  usd: 1.35, digits: 2 ),
+        TypeFiat("AUD" ,  usd: 0.74, digits: 2 ),
+        TypeFiat("JPY" ,  usd: 0.0088, digits: 2 )
     ]
 
-    override init(_ suffix: String, _ usd: Double ) {
-        super.init( suffix, usd )
+    override init(_ suffix: String, usd: Double, digits: Int ) {
+        super.init( suffix, usd: usd, digits: digits )
     }
     
     static func getRecord(_ index: Int ) -> TypeFiat? {

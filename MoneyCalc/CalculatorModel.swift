@@ -23,32 +23,43 @@ typealias TaggedValue = (tag: TypeTag, reg: Double )
 
 protocol TypeRecord {
     var suffix: String { get }
+    var digits: Int { get set }
 }
 
 class TypeUntyped: TypeRecord {
     var suffix: String { "" }
+    var digits: Int = 4
+    
+    private init() {}
+    
+    static let record = TypeUntyped()
 }
 
 class TypePercentage: TypeRecord {
     var suffix: String { "%" }
+    var digits: Int = 2
+
+    private init() {}
+
+    static let record = TypePercentage()
 }
 
- func getRecord(_ tag: TypeTag ) -> TypeRecord {
+ func getRecord(_ tag: TypeTag ) -> TypeRecord? {
     
     switch tag.class {
     case .untyped:
-        return TypeUntyped()
+        return TypeUntyped.record
     case .percentage:
-        return TypePercentage()
+        return TypePercentage.record
         
     case .crypto, .fiat:
         if let rec = TypeFinancial.getRecord(tag) {
             return rec
         }
-        return TypeUntyped()
+        return nil
 
     default:
-        return TypeUntyped()
+        return nil
     }
 }
 
@@ -56,7 +67,7 @@ class TypePercentage: TypeRecord {
 struct CalcState {
     var stack: [Double] = Array( repeating: 0.0, count: stackSize)
     var tags: [TypeTag] = Array( repeating: (.untyped, 0), count: stackSize)
-    var lastX: Double = 0.0
+    var lastX: TaggedValue = ((.untyped, 0), 0.0)
     var noLift: Bool = false
     
     var X: Double {
@@ -168,10 +179,18 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     
     func updateDisplay() {
         for rx in (enterMode ? regY : regX) ... regT {
-            buffer[ bufferIndex(rx) ].register = state.stack[rx].fixedFormat
+            var digits = 4
+            if let tr: TypeRecord = getRecord( state.tags[rx] ) {
+                digits = tr.digits
+            }
+            buffer[ bufferIndex(rx) ].register = state.stack[rx].displayFormat( digits )
             
-            let typeRec = getRecord( state.tags[rx] )
-            buffer[ bufferIndex(rx) ].suffix = typeRec.suffix
+            if let typeRec = getRecord( state.tags[rx] ) {
+                buffer[ bufferIndex(rx) ].suffix = typeRec.suffix
+            }
+            else {
+                buffer[ bufferIndex(rx) ].suffix = ""
+            }
         }
         if enterMode {
             buffer[ bufferIndex(regX)].register = "\(enterText)_"
@@ -398,6 +417,18 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             }
             break
             
+        case fixL:
+            if var trec = getRecord( state.Xt ) {
+                trec.digits = max(0, trec.digits-1 )
+            }
+            break
+            
+        case fixR:
+            if var trec = getRecord( state.Xt ) {
+                trec.digits = min(15, trec.digits+1 )
+            }
+            break
+            
         default:
             if let op = opTable[keyID] {
                 if let newState = op.transition( state ) {
@@ -419,6 +450,14 @@ extension Double {
         nf.numberStyle = .decimal
         nf.minimumFractionDigits = 4
         nf.maximumFractionDigits = 4
+        return nf.string(from: NSNumber(value: self)) ?? ""
+    }
+
+    func displayFormat(_ digits: Int ) -> String {
+        let nf = NumberFormatter()
+        nf.numberStyle = .decimal
+        nf.minimumFractionDigits = digits
+        nf.maximumFractionDigits = digits
         return nf.string(from: NSNumber(value: self)) ?? ""
     }
 }

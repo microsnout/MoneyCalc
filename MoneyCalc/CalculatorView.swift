@@ -19,7 +19,7 @@ let sk0 = 50, sk1 = 51, sk2 = 52, sk3 = 53, sk4 = 54, sk5 = 55, sk6 = 56, sk7 = 
 
 let padDigits = 0, padOp = 1, padEnter = 2, padClear = 3
 
-let rowCrypto = 10, rowFiat = 11
+let rowCrypto = 10, rowFiat = 11, rowStock = 12
 
 
 struct CalculatorView: View {
@@ -75,7 +75,7 @@ struct CalculatorView: View {
                 SoftKey(sk2, "SOL"),
                 SoftKey(sk3, "ADA"),
                 SoftKey(sk4, "DOT"),
-                SoftKey(sk5, "XRP")
+                SoftKey(sk5, "LINK")
               ],
         fontSize: 15.0,
         caption: "Crypto"
@@ -92,6 +92,19 @@ struct CalculatorView: View {
               ],
         fontSize: 15.0,
         caption: "Fiat"
+    )
+
+    let stockRowSpec = RowSpec (
+        id: rowStock,
+        keys: [ SoftKey(sk0, "SU"),
+                SoftKey(sk1, "T"),
+                SoftKey(sk2, "APPL"),
+                SoftKey(sk3, "ENB"),
+                SoftKey(sk4, "BCE"),
+                SoftKey(sk5, "BNS")
+              ],
+        fontSize: 15.0,
+        caption: "Stock"
     )
 
     // **************************
@@ -125,6 +138,8 @@ struct CalculatorView: View {
                             Keypad( keySpec: keySpec, padSpec: clearPad, keyPressHandler: model)
                         }
                     }.alignmentGuide(.leading, computeValue: {_ in -30})
+                    SoftKeyRow( keySpec: skSpec, rowSpec: stockRowSpec, keyPressHandler: model )
+                        .padding( .vertical, 5 )
                     Spacer()
                 }
             }.padding(30)

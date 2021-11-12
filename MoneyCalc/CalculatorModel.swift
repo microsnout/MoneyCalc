@@ -164,7 +164,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
 
     // Display buffer
     @Published var buffer: [DisplayRow] = stackPrefixValues.prefix(displayRows).reversed().map {
-        DisplayRow( prefix: $0, register: 0.0.fixedFormat)
+        DisplayRow( prefix: $0, register: 0.0.displayFormat(TypeUntyped.record.digits) )
     }
 
     // Numeric entry occurs on X register

@@ -26,7 +26,7 @@ struct CalculatorView: View {
     @StateObject private var model = CalculatorModel()
     
     let keySpec = KeySpec(
-        width: 40, height: 40,
+        width: 50, height: 40,
         radius: 10, spacing: 10,
         buttonColor: Color("KeyColor"), textColor: Color("KeyText"))
     
@@ -122,6 +122,7 @@ struct CalculatorView: View {
 //                    .foregroundColor( Color.clear)
                  
                 VStack(alignment: .leading) {
+                    MemoryDisplay( list: model.memoryList )
                     Spacer()
                     Display( buffer: model.buffer )
                     SoftKeyRow( keySpec: skSpec, rowSpec: cryptoRowSpec, keyPressHandler: model )
@@ -138,11 +139,11 @@ struct CalculatorView: View {
                             Keypad( keySpec: keySpec, padSpec: clearPad, keyPressHandler: model)
                         }
                     }.alignmentGuide(.leading, computeValue: {_ in -30})
-                    SoftKeyRow( keySpec: skSpec, rowSpec: stockRowSpec, keyPressHandler: model )
-                        .padding( .vertical, 5 )
+//                    SoftKeyRow( keySpec: skSpec, rowSpec: stockRowSpec, keyPressHandler: model )
+//                        .padding( .vertical, 5 )
                     Spacer()
                 }
-            }.padding(30)
+            }.padding(.horizontal, 30)
         }
 
             

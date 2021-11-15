@@ -46,11 +46,9 @@ class TypePercentage: TypeRecord {
     static let record = TypePercentage()
 }
 
- func getRecord(_ tag: TypeTag ) -> TypeRecord? {
+func getRecord(_ tag: TypeTag ) -> TypeRecord {
     
     switch tag.class {
-    case .untyped:
-        return TypeUntyped.record
     case .percentage:
         return TypePercentage.record
         
@@ -58,10 +56,10 @@ class TypePercentage: TypeRecord {
         if let rec = TypeFinancial.getRecord(tag) {
             return rec
         }
-        return nil
+        return TypeUntyped.record
 
     default:
-        return nil
+        return TypeUntyped.record
     }
 }
 
@@ -154,18 +152,13 @@ protocol StateOperator {
     func transition(_ s0: CalcState ) -> CalcState?
 }
 
-
-class CalculatorModel: ObservableObject, KeyPressHandler {
+class CalculatorModel: ObservableObject, KeyPressHandler, MemoryDisplayHandler {
     // Current Calculator State
     var state = CalcState()
     var undoStack = UndoStack()
 
     // Persistant memory cells
-    struct MemoryCell {
-        var caption: String
-        var value: TaggedValue = untypedZero
-    }
-    var memory = [MemoryCell]()
+    var memory = [TaggedValue]()
 
     // Display window into register stack
     static let displayRows = 3
@@ -178,7 +171,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     @Published var memoryList: [MemoryItem] = [
         MemoryItem( prefix: "One", register: "0.005"),
         MemoryItem( prefix: "Two", register: "0.005"),
-        MemoryItem( prefix: "Three", register: "0.005", suffix: "BTC")]
+        MemoryItem( prefix: "Three", register: "0.00000005", suffix: "MATIC")]
 
     // Numeric entry occurs on X register
     private var enterMode: Bool = false;
@@ -190,20 +183,24 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         return CalculatorModel.displayRows - stackIndex - 1
     }
     
+    func addMemoryItem() {
+        memory.append( state.Xtv )
+        
+        let tr: TypeRecord = getRecord( state.Xt )
+        memoryList.append( MemoryItem( prefix: "newValue", register: state.X.displayFormat( tr.digits), suffix: tr.suffix))
+    }
+    
+    func delMemoryItems( set: IndexSet) {
+        memory.remove( atOffsets: set )
+        memoryList.remove( atOffsets: set )
+    }
+    
     func updateDisplay() {
         for rx in (enterMode ? regY : regX) ... CalculatorModel.displayRows-1 {
-            var digits = 4
-            if let tr: TypeRecord = getRecord( state.stack[rx].tag ) {
-                digits = tr.digits
-            }
-            buffer[ bufferIndex(rx) ].register = state.stack[rx].reg.displayFormat( digits )
+            let tr: TypeRecord = getRecord( state.stack[rx].tag )
             
-            if let typeRec = getRecord( state.stack[rx].tag ) {
-                buffer[ bufferIndex(rx) ].suffix = typeRec.suffix
-            }
-            else {
-                buffer[ bufferIndex(rx) ].suffix = ""
-            }
+            buffer[ bufferIndex(rx) ].register = state.stack[rx].reg.displayFormat( tr.digits )
+            buffer[ bufferIndex(rx) ].suffix = tr.suffix
         }
         if enterMode {
             buffer[ bufferIndex(regX)].register = "\(enterText)_"
@@ -431,15 +428,13 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             break
             
         case fixL:
-            if var trec = getRecord( state.Xt ) {
-                trec.digits = max(0, trec.digits-1 )
-            }
+            var trec = getRecord( state.Xt )
+            trec.digits = max(0, trec.digits-1 )
             break
             
         case fixR:
-            if var trec = getRecord( state.Xt ) {
-                trec.digits = min(15, trec.digits+1 )
-            }
+            var trec = getRecord( state.Xt )
+            trec.digits = min(15, trec.digits+1 )
             break
             
         default:

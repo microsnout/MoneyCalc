@@ -122,7 +122,7 @@ struct CalculatorView: View {
 //                    .foregroundColor( Color.clear)
                  
                 VStack(alignment: .leading) {
-                    MemoryDisplay( list: model.memoryList )
+                    MemoryDisplay( list: model.memoryList, displayHandler: model )
                     Spacer()
                     Display( buffer: model.buffer )
                     SoftKeyRow( keySpec: skSpec, rowSpec: cryptoRowSpec, keyPressHandler: model )

@@ -69,6 +69,12 @@ struct Display: View {
     }
 }
 
+// ************************************************************* //
+
+protocol MemoryDisplayHandler {
+    func addMemoryItem()
+    func delMemoryItems( set: IndexSet )
+}
 
 struct MemoryItem: Identifiable {
     private static var index = 0
@@ -90,26 +96,34 @@ struct MemoryItem: Identifiable {
 }
 
 struct MemoryDisplay: View {
-    @State private var list: [MemoryItem]
     @State private var editMode = EditMode.inactive
     
-    let colWidth = 10.0
-    let monoFont = Font.footnote
+    var list: [MemoryItem]
 
-    init( list: [MemoryItem] ) {
-        _list = State( initialValue: list)
+    let colWidth = 9.0
+    let monoFont = Font.footnote
+    
+    var displayHandler: MemoryDisplayHandler
+
+    init( list: [MemoryItem], displayHandler: MemoryDisplayHandler ) {
+        self.list = list
+        self.displayHandler = displayHandler
         
 //        UITableView.appearance().rowHeight = CGFloat(36.0)
         UITableView.appearance().backgroundColor = UIColor(Color("Background"))
         UINavigationBar.appearance().backgroundColor = UIColor(Color("Background"))
     }
     
+    @ViewBuilder
     private var addButton: some View {
-        return editMode == .inactive ?
-            AnyView( Button(action: onAdd) { Image( systemName: "plus") }) :
-            AnyView( EmptyView())
+        if editMode == .inactive {
+            Button( action: { displayHandler.addMemoryItem() }) {
+                Image( systemName: "plus") }
+        } else {
+            EmptyView()
+        }
     }
-        
+    
     var body: some View {
         NavigationView {
             List {
@@ -123,16 +137,10 @@ struct MemoryDisplay: View {
                                 .listRowBackground(back)
                             Text( item.row.suffix ).font(.caption).listRowBackground(back)
                         }
-                        .padding( .leading, 30)
+                        .padding( .leading, 0)
                     }
                 }
-                .onDelete { indexSet in
-                    list.remove( atOffsets: indexSet)
-                }
-                .onMove { indexSet, index in
-                    list.move( fromOffsets: indexSet, toOffset: index)
-                }
-                
+                .onDelete( perform: { offsets in displayHandler.delMemoryItems( set: offsets) } )
             }
             .navigationBarTitle( "", displayMode: .inline )
             .navigationBarHidden(false)
@@ -141,15 +149,10 @@ struct MemoryDisplay: View {
             .listStyle( PlainListStyle() )
             .padding( .horizontal, 0)
             .padding( .top, 0)
-            .background(Color("Background"))
+            .background( Color("Background") )
         }
-        .navigationViewStyle(StackNavigationViewStyle())
+        .navigationViewStyle( StackNavigationViewStyle())
         .padding(.top, 10)
     }
-
-    func onAdd() {
-        // To be implemented in the next section
-    }
 }
-
 

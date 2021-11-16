@@ -35,6 +35,18 @@ struct DisplayRow {
     var suffix: String = ""
 }
 
+struct TypedRegister: View {
+    let reg: String, regFont: Font, colWidth: Double
+    let type: String, typeFont: Font
+    
+    var body: some View {
+        HStack {
+            MonoText(reg, charWidth: colWidth, font: regFont)
+            Text(type).font(typeFont).bold().foregroundColor(Color.gray)
+        }
+    }
+}
+
 struct Display: View {
     let rows: Int
     let rowHeight:Double = 25.0
@@ -54,11 +66,9 @@ struct Display: View {
             VStack( alignment: .leading, spacing: 5) {
                 ForEach (0..<rows, id: \.self) { index in
                     HStack() {
-                        Text( buffer[index].prefix).font(.system(size: 14.0)).bold().foregroundColor(Color("Frame"))
-                        MonoText(
-                            String( buffer[index].register ),
-                            charWidth: colWidth)
-                        Text( buffer[index].suffix).font(.system(size: 12.0)).bold().foregroundColor(Color.gray)
+                        Text( buffer[index].prefix).font(.body).bold().foregroundColor(Color("Frame"))
+                        TypedRegister( reg: buffer[index].register, regFont: .body, colWidth: colWidth,
+                                       type: buffer[index].suffix, typeFont: .footnote )
                     }.padding(.leading, 10)
                 }
             }
@@ -95,6 +105,27 @@ struct MemoryItem: Identifiable {
     }
 }
 
+struct MemoryDetail: View {
+    @State private var editMode = EditMode.inactive
+    
+    let item: MemoryItem
+    
+    init( item: MemoryItem ) {
+        self.item = item
+    }
+    
+    var body: some View {
+        VStack {
+//            TextField( text: $caption )
+            HStack {
+                TypedRegister( reg: item.row.register, regFont: .footnote, colWidth: 9.0,
+                               type: item.row.suffix, typeFont: .caption )
+            }
+            .padding( .leading, 0)
+        }
+    }
+}
+
 struct MemoryDisplay: View {
     @State private var editMode = EditMode.inactive
     
@@ -128,16 +159,14 @@ struct MemoryDisplay: View {
         NavigationView {
             List {
                 ForEach ( list ) { item in
-                    let back = item.id % 2 == 0 ? Color("List0") : Color("List1")
-                                 
                     VStack( alignment: .leading ) {
-                        Text( item.row.prefix ).font(monoFont).bold().listRowBackground(back)
-                        HStack {
-                            MonoText( item.row.register, charWidth: colWidth, font: .footnote)
-                                .listRowBackground(back)
-                            Text( item.row.suffix ).font(.caption).listRowBackground(back)
+                        NavigationLink {
+                            MemoryDetail( item: item )
+                        } label: {
+                            Text( item.row.prefix ).font(monoFont).bold().listRowBackground(Color("List0"))
                         }
-                        .padding( .leading, 0)
+                        TypedRegister( reg: item.row.register, regFont: .footnote, colWidth: colWidth,
+                                           type: item.row.suffix, typeFont: .caption )
                     }
                 }
                 .onDelete( perform: { offsets in displayHandler.delMemoryItems( set: offsets) } )

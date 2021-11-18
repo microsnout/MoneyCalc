@@ -21,6 +21,11 @@ typealias TypeTag = ( class: TypeClass, index: TypeIndex)
 
 typealias TaggedValue = (tag: TypeTag, reg: Double )
 
+struct NamedValue {
+    var name: String
+    var value: TaggedValue
+}
+
 let untypedZero: TaggedValue = ((.untyped, 0), 0.0)
 
 protocol TypeRecord {
@@ -68,6 +73,7 @@ struct CalcState {
     var stack: [TaggedValue] = Array( repeating: untypedZero, count: stackSize)
     var lastX: TaggedValue = untypedZero
     var noLift: Bool = false
+    var memory = [NamedValue]()
     
     var X: Double {
         get { stack[regX].reg }
@@ -157,21 +163,15 @@ class CalculatorModel: ObservableObject, KeyPressHandler, MemoryDisplayHandler {
     var state = CalcState()
     var undoStack = UndoStack()
 
-    // Persistant memory cells
-    var memory = [TaggedValue]()
-
     // Display window into register stack
     static let displayRows = 3
 
     // Display buffer
-    @Published var buffer: [DisplayRow] = stackPrefixValues.prefix(displayRows).reversed().map {
-        DisplayRow( prefix: $0, register: 0.0.displayFormat( TypeUntyped.record.digits ) )
+    @Published var buffer: [RowData] = stackPrefixValues.prefix(displayRows).reversed().map {
+        RowData( prefix: $0, register: 0.0.displayFormat( TypeUntyped.record.digits ) )
     }
     
-    @Published var memoryList: [MemoryItem] = [
-        MemoryItem( prefix: "One", register: "0.005"),
-        MemoryItem( prefix: "Two", register: "0.005"),
-        MemoryItem( prefix: "Three", register: "0.00000005", suffix: "MATIC")]
+    @Published var memoryList = [MemoryItem]()
 
     // Numeric entry occurs on X register
     private var enterMode: Bool = false;
@@ -184,15 +184,21 @@ class CalculatorModel: ObservableObject, KeyPressHandler, MemoryDisplayHandler {
     }
     
     func addMemoryItem() {
-        memory.append( state.Xtv )
+        state.memory.append( NamedValue( name: "", value: state.Xtv) )
         
         let tr: TypeRecord = getRecord( state.Xt )
-        memoryList.append( MemoryItem( prefix: "newValue", register: state.X.displayFormat( tr.digits), suffix: tr.suffix))
+        memoryList.append( MemoryItem( prefix: "", register: state.X.displayFormat( tr.digits), suffix: tr.suffix))
     }
     
     func delMemoryItems( set: IndexSet) {
-        memory.remove( atOffsets: set )
+        state.memory.remove( atOffsets: set )
         memoryList.remove( atOffsets: set )
+    }
+    
+    func renameMemoryItem( index: Int, newName: String ) {
+        state.memory[index].name = newName
+        
+        memoryList[index].row.prefix = newName
     }
     
     func updateDisplay() {

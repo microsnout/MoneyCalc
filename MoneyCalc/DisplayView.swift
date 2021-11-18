@@ -7,6 +7,25 @@
 
 import SwiftUI
 
+struct MyTextField: UIViewRepresentable {
+    typealias UIViewType = UITextField
+
+    @Binding var becomeFirstResponder: Bool
+
+    func makeUIView(context: Context) -> UITextField {
+        return UITextField()
+    }
+    
+    func updateUIView(_ textField: UITextField, context: Context) {
+        if self.becomeFirstResponder {
+            DispatchQueue.main.async {
+                textField.becomeFirstResponder()
+                self.becomeFirstResponder = false
+            }
+        }
+    }
+}
+
 struct MonoText: View {
     let content: String
     let charWidth: CGFloat
@@ -29,20 +48,43 @@ struct MonoText: View {
     }
 }
 
-struct DisplayRow {
-    var prefix: String = ""
-    var register: String = ""
-    var suffix: String = ""
+typealias TextSpec = ( prefixFont: Font, registerFont: Font, suffixFont: Font, monoSpace: Double )
+
+enum TextSize {
+    case normal, small
+}
+
+let textSpecTable: [TextSize: TextSpec] = [
+    .normal : ( .footnote, .body, .footnote, 12.0 ),
+    .small  : ( .caption, .footnote, .caption, 9.0 )
+]
+
+struct RowData {
+    var prefix:   String = ""
+    var register: String
+    var suffix:   String = ""
+    
+    func noPrefix() -> RowData {
+        return RowData( register: register, suffix: suffix )
+    }
 }
 
 struct TypedRegister: View {
-    let reg: String, regFont: Font, colWidth: Double
-    let type: String, typeFont: Font
+    let row: RowData
+    let size: TextSize
     
     var body: some View {
-        HStack {
-            MonoText(reg, charWidth: colWidth, font: regFont)
-            Text(type).font(typeFont).bold().foregroundColor(Color.gray)
+        if let spec = textSpecTable[size] {
+            HStack {
+                if !row.prefix.isEmpty {
+                    Text(row.prefix).font(spec.prefixFont).bold().foregroundColor(Color("Frame"))
+                }
+                MonoText(row.register, charWidth: spec.monoSpace, font: spec.registerFont)
+                Text(row.suffix).font(spec.suffixFont).bold().foregroundColor(Color.gray)
+            }
+        }
+        else {
+            EmptyView()
         }
     }
 }
@@ -50,10 +92,9 @@ struct TypedRegister: View {
 struct Display: View {
     let rows: Int
     let rowHeight:Double = 25.0
-    let colWidth:Double = 12.0
-    let buffer: [DisplayRow]
+    let buffer: [RowData]
     
-    init( buffer: [DisplayRow] ) {
+    init( buffer: [RowData] ) {
         self.buffer = buffer
         self.rows = buffer.count
     }
@@ -65,11 +106,7 @@ struct Display: View {
                 .frame(height: rowHeight*Double(rows) + 15.0)
             VStack( alignment: .leading, spacing: 5) {
                 ForEach (0..<rows, id: \.self) { index in
-                    HStack() {
-                        Text( buffer[index].prefix).font(.body).bold().foregroundColor(Color("Frame"))
-                        TypedRegister( reg: buffer[index].register, regFont: .body, colWidth: colWidth,
-                                       type: buffer[index].suffix, typeFont: .footnote )
-                    }.padding(.leading, 10)
+                    TypedRegister( row: buffer[index], size: .normal ).padding(.leading, 10)
                 }
             }
             .frame( height: rowHeight*Double(rows) )
@@ -84,45 +121,47 @@ struct Display: View {
 protocol MemoryDisplayHandler {
     func addMemoryItem()
     func delMemoryItems( set: IndexSet )
+    func renameMemoryItem( index: Int, newName: String )
 }
 
 struct MemoryItem: Identifiable {
     private static var index = 0
     
     let id: Int
-    var row: DisplayRow
-    
-    init() {
-        row = DisplayRow()
-        id = MemoryItem.index
-        MemoryItem.index += 1
-    }
+    var row: RowData
     
     init( prefix: String, register: String, suffix: String = "" ) {
-        row = DisplayRow( prefix: prefix, register: register, suffix: suffix )
+        row = RowData( prefix: prefix, register: register, suffix: suffix )
         id = MemoryItem.index
         MemoryItem.index += 1
     }
 }
 
-struct MemoryDetail: View {
+struct MemoryDetailView: View {
     @State private var editMode = EditMode.inactive
+    @State private var editText = ""
     
-    let item: MemoryItem
+    var displayHandler: MemoryDisplayHandler
     
-    init( item: MemoryItem ) {
+    var item: MemoryItem
+    
+    init( item: MemoryItem, displayHandler: MemoryDisplayHandler ) {
         self.item = item
+        self.displayHandler = displayHandler
     }
     
     var body: some View {
-        VStack {
-//            TextField( text: $caption )
-            HStack {
-                TypedRegister( reg: item.row.register, regFont: .footnote, colWidth: 9.0,
-                               type: item.row.suffix, typeFont: .caption )
+        Form {
+            TextField( "Memory Name", text: $editText,
+                onCommit: { displayHandler.renameMemoryItem(index: 0, newName: editText) }
+            )
+            .onAppear {
+                editText = item.row.prefix
             }
-            .padding( .leading, 0)
+
+            TypedRegister( row: item.row.noPrefix(), size: .normal ).padding( .leading, 0)
         }
+        
     }
 }
 
@@ -161,12 +200,11 @@ struct MemoryDisplay: View {
                 ForEach ( list ) { item in
                     VStack( alignment: .leading ) {
                         NavigationLink {
-                            MemoryDetail( item: item )
+                            MemoryDetailView( item: item, displayHandler: displayHandler )
                         } label: {
                             Text( item.row.prefix ).font(monoFont).bold().listRowBackground(Color("List0"))
                         }
-                        TypedRegister( reg: item.row.register, regFont: .footnote, colWidth: colWidth,
-                                           type: item.row.suffix, typeFont: .caption )
+                        TypedRegister( row: item.row.noPrefix(), size: .small )
                     }
                 }
                 .onDelete( perform: { offsets in displayHandler.delMemoryItems( set: offsets) } )

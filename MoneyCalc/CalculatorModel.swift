@@ -21,11 +21,6 @@ typealias TypeTag = ( class: TypeClass, index: TypeIndex)
 
 typealias TaggedValue = (tag: TypeTag, reg: Double )
 
-struct NamedValue {
-    var name: String
-    var value: TaggedValue
-}
-
 let untypedZero: TaggedValue = ((.untyped, 0), 0.0)
 
 protocol TypeRecord {
@@ -68,21 +63,39 @@ func getRecord(_ tag: TypeTag ) -> TypeRecord {
     }
 }
 
+struct NamedValue: RowDataItem {
+    var name: String
+    var value: TaggedValue
+    
+    var prefix: String {
+        return name
+    }
+    
+    var register: String {
+        let tr = getRecord( value.tag )
+        return value.reg.displayFormat( tr.digits )
+    }
+    
+    var suffix: String {
+        let tr = getRecord( value.tag )
+        return tr.suffix
+    }
+}
 
 struct CalcState {
-    var stack: [TaggedValue] = Array( repeating: untypedZero, count: stackSize)
+    var stack: [NamedValue] = stackPrefixValues.map { NamedValue( name: $0, value: untypedZero) }
     var lastX: TaggedValue = untypedZero
     var noLift: Bool = false
     var memory = [NamedValue]()
     
     var X: Double {
-        get { stack[regX].reg }
-        set { stack[regX].reg = newValue }
+        get { stack[regX].value.reg }
+        set { stack[regX].value.reg = newValue }
     }
     
     var Xt: TypeTag {
-        get { stack[regX].tag }
-        set { stack[regX].tag = newValue }
+        get { stack[regX].value.tag }
+        set { stack[regX].value.tag = newValue }
     }
     
     var Xtv: TaggedValue {
@@ -91,13 +104,13 @@ struct CalcState {
     }
     
     var Y: Double {
-        get { stack[regY].reg }
-        set { stack[regY].reg = newValue }
+        get { stack[regY].value.reg }
+        set { stack[regY].value.reg = newValue }
     }
     
     var Yt: TypeTag {
-        get { stack[regY].tag }
-        set { stack[regY].tag = newValue }
+        get { stack[regY].value.tag }
+        set { stack[regY].value.tag = newValue }
     }
     
     var Ytv: TaggedValue {
@@ -106,26 +119,26 @@ struct CalcState {
     }
     
     var Z: Double {
-        get { stack[regZ].reg }
-        set { stack[regZ].reg = newValue }
+        get { stack[regZ].value.reg }
+        set { stack[regZ].value.reg = newValue }
     }
     
     var T: Double {
-        get { stack[regT].reg }
-        set { stack[regT].reg = newValue }
+        get { stack[regT].value.reg }
+        set { stack[regT].value.reg = newValue }
     }
     
     mutating func stackDrop(_ by: Int = 1 ) {
         for rx in regX ..< stackSize-1 {
-            self.stack[rx].reg = self.stack[rx+1].reg
-            self.stack[rx].tag = self.stack[rx+1].tag
+            self.stack[rx].value.reg = self.stack[rx+1].value.reg
+            self.stack[rx].value.tag = self.stack[rx+1].value.tag
         }
     }
 
     mutating func stackLift(_ by: Int = 1 ) {
         for rx in stride( from: stackSize-1, to: regX, by: -1 ) {
-            self.stack[rx].reg = self.stack[rx-1].reg
-            self.stack[rx].tag = self.stack[rx-1].tag
+            self.stack[rx].value.reg = self.stack[rx-1].value.reg
+            self.stack[rx].value.tag = self.stack[rx-1].value.tag
         }
     }
 
@@ -133,8 +146,8 @@ struct CalcState {
         let xtv = self.Xtv
         stackDrop()
         let last = stackSize-1
-        self.stack[last].reg = xtv.reg
-        self.stack[last].tag = xtv.tag
+        self.stack[last].value.reg = xtv.reg
+        self.stack[last].value.tag = xtv.tag
     }
 }
 
@@ -203,9 +216,9 @@ class CalculatorModel: ObservableObject, KeyPressHandler, MemoryDisplayHandler {
     
     func updateDisplay() {
         for rx in (enterMode ? regY : regX) ... CalculatorModel.displayRows-1 {
-            let tr: TypeRecord = getRecord( state.stack[rx].tag )
+            let tr: TypeRecord = getRecord( state.stack[rx].value.tag )
             
-            buffer[ bufferIndex(rx) ].register = state.stack[rx].reg.displayFormat( tr.digits )
+            buffer[ bufferIndex(rx) ].register = state.stack[rx].value.reg.displayFormat( tr.digits )
             buffer[ bufferIndex(rx) ].suffix = tr.suffix
         }
         if enterMode {
@@ -391,8 +404,8 @@ class CalculatorModel: ObservableObject, KeyPressHandler, MemoryDisplayHandler {
                 return
             }
                 
-            state.stack[regX].reg = Double(enterText)!
-            state.stack[regX].tag = (.untyped, 0)
+            state.stack[regX].value.reg = Double(enterText)!
+            state.stack[regX].value.tag = (.untyped, 0)
             enterMode = false
             // Fallthrough to switch
         }

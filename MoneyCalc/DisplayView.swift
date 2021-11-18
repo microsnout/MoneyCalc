@@ -7,25 +7,6 @@
 
 import SwiftUI
 
-struct MyTextField: UIViewRepresentable {
-    typealias UIViewType = UITextField
-
-    @Binding var becomeFirstResponder: Bool
-
-    func makeUIView(context: Context) -> UITextField {
-        return UITextField()
-    }
-    
-    func updateUIView(_ textField: UITextField, context: Context) {
-        if self.becomeFirstResponder {
-            DispatchQueue.main.async {
-                textField.becomeFirstResponder()
-                self.becomeFirstResponder = false
-            }
-        }
-    }
-}
-
 struct MonoText: View {
     let content: String
     let charWidth: CGFloat
@@ -58,6 +39,12 @@ let textSpecTable: [TextSize: TextSpec] = [
     .normal : ( .footnote, .body, .footnote, 12.0 ),
     .small  : ( .caption, .footnote, .caption, 9.0 )
 ]
+
+protocol RowDataItem {
+    var prefix:   String { get }
+    var register: String { get }
+    var suffix:   String { get }
+}
 
 struct RowData {
     var prefix:   String = ""

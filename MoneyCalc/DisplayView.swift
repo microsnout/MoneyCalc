@@ -46,6 +46,19 @@ protocol RowDataItem {
     var suffix:   String { get }
 }
 
+protocol DisplayHandler {
+    
+    var rowCount: Int { get }
+    
+    // Main diaplay
+    func getRow( index: Int ) -> RowDataItem
+    
+    // Memory detail display
+    func addMemoryItem()
+    func delMemoryItems( set: IndexSet )
+    func renameMemoryItem( index: Int, newName: String )
+}
+
 struct RowData {
     var prefix:   String = ""
     var register: String
@@ -104,12 +117,6 @@ struct Display: View {
 }
 
 // ************************************************************* //
-
-protocol MemoryDisplayHandler {
-    func addMemoryItem()
-    func delMemoryItems( set: IndexSet )
-    func renameMemoryItem( index: Int, newName: String )
-}
 
 struct MemoryItem: Identifiable {
     private static var index = 0

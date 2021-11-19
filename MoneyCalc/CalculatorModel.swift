@@ -171,9 +171,10 @@ protocol StateOperator {
     func transition(_ s0: CalcState ) -> CalcState?
 }
 
-class CalculatorModel: ObservableObject, KeyPressHandler, MemoryDisplayHandler {
+class CalculatorModel: ObservableObject, KeyPressHandler, DisplayHandler {
     // Current Calculator State
-    var state = CalcState()
+    @Published var state = CalcState()
+    
     var undoStack = UndoStack()
 
     // Display window into register stack
@@ -196,6 +197,22 @@ class CalculatorModel: ObservableObject, KeyPressHandler, MemoryDisplayHandler {
         return CalculatorModel.displayRows - stackIndex - 1
     }
     
+    // *** DisplayHandler Protocol ***
+    
+    var rowCount: Int { return CalculatorModel.displayRows }
+    
+    func getRow( index: Int ) -> RowDataItem {
+        let stkIndex = bufferIndex(index)
+        
+        if stkIndex == regX && enterMode {
+            
+            buffer[ bufferIndex(regX)].register = "\(enterText)_"
+            buffer[ bufferIndex(regX)].suffix = ""
+        }
+        return state.stack[ stkIndex ]
+    }
+    
+
     func addMemoryItem() {
         state.memory.append( NamedValue( name: "", value: state.Xtv) )
         

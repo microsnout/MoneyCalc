@@ -4,8 +4,32 @@
 //
 //  Created by Barry Hall on 2021-10-28.
 //
-
+import Combine
 import SwiftUI
+
+class ObservableArray<T>: ObservableObject {
+
+    @Published var array:[T] = []
+    var cancellables = [AnyCancellable]()
+
+    init(array: [T]) {
+        self.array = array
+
+    }
+
+    func observeChildrenChanges<K>(_ type:K.Type) throws ->ObservableArray<T> where K : ObservableObject{
+        let array2 = array as! [K]
+        array2.forEach({
+            let c = $0.objectWillChange.sink(receiveValue: { _ in self.objectWillChange.send() })
+
+            // Important: You have to keep the returned value allocated,
+            // otherwise the sink subscription gets cancelled
+            self.cancellables.append(c)
+        })
+        return self
+    }
+
+}
 
 struct MonoText: View {
     let content: String
@@ -46,31 +70,19 @@ protocol RowDataItem {
     var suffix:   String { get }
 }
 
-protocol DisplayHandler {
+struct NoPrefix: RowDataItem {
+    let prefix = ""
+    let register: String
+    let suffix: String
     
-    var rowCount: Int { get }
-    
-    // Main diaplay
-    func getRow( index: Int ) -> RowDataItem
-    
-    // Memory detail display
-    func addMemoryItem()
-    func delMemoryItems( set: IndexSet )
-    func renameMemoryItem( index: Int, newName: String )
-}
-
-struct RowData {
-    var prefix:   String = ""
-    var register: String
-    var suffix:   String = ""
-    
-    func noPrefix() -> RowData {
-        return RowData( register: register, suffix: suffix )
+    init(_ row: RowDataItem ) {
+        self.register = row.register
+        self.suffix = row.suffix
     }
 }
 
 struct TypedRegister: View {
-    let row: RowData
+    let row: RowDataItem
     let size: TextSize
     
     var body: some View {
@@ -90,26 +102,21 @@ struct TypedRegister: View {
 }
 
 struct Display: View {
-    let rows: Int
+    @StateObject var model: CalculatorModel
+
     let rowHeight:Double = 25.0
-    let buffer: [RowData]
-    
-    init( buffer: [RowData] ) {
-        self.buffer = buffer
-        self.rows = buffer.count
-    }
     
     var body: some View {
         ZStack(alignment: .leading) {
             Rectangle()
                 .fill(Color("List0"))
-                .frame(height: rowHeight*Double(rows) + 15.0)
+                .frame(height: rowHeight*Double(model.rowCount) + 15.0)
             VStack( alignment: .leading, spacing: 5) {
-                ForEach (0..<rows, id: \.self) { index in
-                    TypedRegister( row: buffer[index], size: .normal ).padding(.leading, 10)
+                ForEach (0..<model.rowCount, id: \.self) { index in
+                    TypedRegister( row: model.getRow(index: index), size: .normal ).padding(.leading, 10)
                 }
             }
-            .frame( height: rowHeight*Double(rows) )
+            .frame( height: rowHeight*Double(model.rowCount) )
         }
         .padding(15)
         .border(Color("Frame"), width: 10)
@@ -118,70 +125,43 @@ struct Display: View {
 
 // ************************************************************* //
 
-struct MemoryItem: Identifiable {
-    private static var index = 0
-    
-    let id: Int
-    var row: RowData
-    
-    init( prefix: String, register: String, suffix: String = "" ) {
-        row = RowData( prefix: prefix, register: register, suffix: suffix )
-        id = MemoryItem.index
-        MemoryItem.index += 1
-    }
-}
-
 struct MemoryDetailView: View {
+    @StateObject var model: CalculatorModel
+
     @State private var editMode = EditMode.inactive
     @State private var editText = ""
-    
-    var displayHandler: MemoryDisplayHandler
-    
-    var item: MemoryItem
-    
-    init( item: MemoryItem, displayHandler: MemoryDisplayHandler ) {
-        self.item = item
-        self.displayHandler = displayHandler
-    }
-    
+        
+    var index: Int
+    var item: RowDataItem
+
     var body: some View {
         Form {
             TextField( "Memory Name", text: $editText,
-                onCommit: { displayHandler.renameMemoryItem(index: 0, newName: editText) }
+                onEditingChanged: { _ in model.renameMemoryItem(index: index, newName: editText) }
+//                onCommit: { model.renameMemoryItem(index: index, newName: editText) }
             )
             .onAppear {
-                editText = item.row.prefix
+                editText = item.prefix
             }
 
-            TypedRegister( row: item.row.noPrefix(), size: .normal ).padding( .leading, 0)
+            TypedRegister( row: NoPrefix(item), size: .normal ).padding( .leading, 0)
         }
         
     }
 }
 
 struct MemoryDisplay: View {
-    @State private var editMode = EditMode.inactive
+    @StateObject var model: CalculatorModel
     
-    var list: [MemoryItem]
+    @State private var editMode = EditMode.inactive
 
     let colWidth = 9.0
     let monoFont = Font.footnote
-    
-    var displayHandler: MemoryDisplayHandler
 
-    init( list: [MemoryItem], displayHandler: MemoryDisplayHandler ) {
-        self.list = list
-        self.displayHandler = displayHandler
-        
-//        UITableView.appearance().rowHeight = CGFloat(36.0)
-        UITableView.appearance().backgroundColor = UIColor(Color("Background"))
-        UINavigationBar.appearance().backgroundColor = UIColor(Color("Background"))
-    }
-    
     @ViewBuilder
     private var addButton: some View {
         if editMode == .inactive {
-            Button( action: { displayHandler.addMemoryItem() }) {
+            Button( action: { model.addMemoryItem() }) {
                 Image( systemName: "plus") }
         } else {
             EmptyView()
@@ -191,17 +171,17 @@ struct MemoryDisplay: View {
     var body: some View {
         NavigationView {
             List {
-                ForEach ( list ) { item in
+                ForEach ( Array( model.memoryRows.enumerated()), id: \.offset ) { index, item in
                     VStack( alignment: .leading ) {
                         NavigationLink {
-                            MemoryDetailView( item: item, displayHandler: displayHandler )
+                            MemoryDetailView(  model: model , index: index, item: item )
                         } label: {
-                            Text( item.row.prefix ).font(monoFont).bold().listRowBackground(Color("List0"))
+                            Text( item.prefix ).font(monoFont).bold().listRowBackground(Color("List0"))
                         }
-                        TypedRegister( row: item.row.noPrefix(), size: .small )
+                        TypedRegister( row: NoPrefix(item), size: .small )
                     }
                 }
-                .onDelete( perform: { offsets in displayHandler.delMemoryItems( set: offsets) } )
+                .onDelete( perform: { offsets in model.delMemoryItems( set: offsets) } )
             }
             .navigationBarTitle( "", displayMode: .inline )
             .navigationBarHidden(false)
@@ -211,6 +191,10 @@ struct MemoryDisplay: View {
             .padding( .horizontal, 0)
             .padding( .top, 0)
             .background( Color("Background") )
+            .onAppear {
+                UITableView.appearance().backgroundColor = UIColor(Color("Background"))
+                UINavigationBar.appearance().backgroundColor = UIColor(Color("Background"))
+            }
         }
         .navigationViewStyle( StackNavigationViewStyle())
         .padding(.top, 10)

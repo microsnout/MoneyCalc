@@ -135,7 +135,6 @@ struct SoftKeyRow: View {
                                height: keySpec.height,
                                alignment: .center)
                         .cornerRadius(keySpec.radius)
-//                        .shadow(radius: keySpec.radius)
                         .overlay(
                             Text("\(key.ch)")
                                 .font(.system(size: rowSpec.fontSize ))

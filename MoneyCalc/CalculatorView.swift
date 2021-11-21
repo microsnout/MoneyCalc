@@ -13,7 +13,7 @@ let plus = 10, minus = 11, times = 12, divide = 13
 
 let dot = 20, enter = 21, clear = 22, equal = 23, back = 24, sign = 25
 
-let fixL = 30, fixR = 31, roll = 32, xy = 33, percent = 34, lastx = 35
+let fixL = 30, fixR = 31, roll = 32, xy = 33, percent = 34, lastx = 35, sto = 36, rcl = 37, mPlus = 38, mMinus = 39
 
 let sk0 = 50, sk1 = 51, sk2 = 52, sk3 = 53, sk4 = 54, sk5 = 55, sk6 = 56, sk7 = 57, sk8 = 58, sk9 = 59
 
@@ -23,7 +23,7 @@ let rowCrypto = 10, rowFiat = 11, rowStock = 12
 
 
 struct CalculatorView: View {
-    @StateObject private var model = CalculatorModel()
+    @StateObject  var model = CalculatorModel()
     
     let keySpec = KeySpec(
         width: 50, height: 40,
@@ -41,24 +41,23 @@ struct CalculatorView: View {
     
     let opPad = PadSpec(
         id: padOp,
-        rows: 4, cols: 2,
-        keys: [ Key(divide, "÷"), Key(fixL, ".00\u{2190}", fontSize: 12),
-                Key(times, "×"),  Key(fixR, ".00\u{2192}", fontSize: 12),
-                Key(minus, "−"),  Key(xy, "X\u{21c6}Y", fontSize: 12),
-                Key(plus,  "+"),  Key(roll, "R\u{2193}", fontSize: 12)
+        rows: 4, cols: 3,
+        keys: [ Key(divide, "÷"), Key(fixL, ".00\u{2190}", fontSize: 12), Key(sto, "STO", fontSize: 12),
+                Key(times, "×"),  Key(fixR, ".00\u{2192}", fontSize: 12), Key(rcl, "RCL", fontSize: 12),
+                Key(minus, "−"),  Key(xy, "X\u{21c6}Y", fontSize: 12),    Key(mPlus, "M+", fontSize: 12),
+                Key(plus,  "+"),  Key(roll, "R\u{2193}", fontSize: 12),   Key(mMinus, "M-", fontSize: 12)
               ])
     
     let enterPad = PadSpec(
         id: padEnter,
         rows: 1, cols: 3,
-        keys: [ Key(enter, "Enter", size: 2, fontSize: 15),
-                Key(back, "BACK", fontSize: 10)
+        keys: [ Key(enter, "Enter", size: 2, fontSize: 15)
               ])
     
     let clearPad = PadSpec(
         id: padClear,
-        rows: 1, cols: 2,
-        keys: [ Key(clear, "CLx", fontSize: 12), Key(lastx, "LASTx", fontSize: 10)
+        rows: 1, cols: 3,
+        keys: [ Key(back, "BACK/UNDO", size: 2, fontSize: 12), Key(clear, "CLx", fontSize: 12)
               ])
     
     // **************************
@@ -121,10 +120,10 @@ struct CalculatorView: View {
 //                    .stroke( Color.gray )
 //                    .foregroundColor( Color.clear)
                  
-                VStack(alignment: .leading) {
-                    MemoryDisplay( list: model.memoryList, displayHandler: model )
+                VStack(alignment: .center) {
+                    MemoryDisplay( model: model )
                     Spacer()
-                    Display( buffer: model.buffer )
+                    Display( model: model )
                     SoftKeyRow( keySpec: skSpec, rowSpec: cryptoRowSpec, keyPressHandler: model )
                         .padding( .vertical, 5 )
                     SoftKeyRow( keySpec: skSpec, rowSpec: fiatRowSpec, keyPressHandler: model )
@@ -138,7 +137,7 @@ struct CalculatorView: View {
                             Keypad( keySpec: keySpec, padSpec: enterPad, keyPressHandler: model)
                             Keypad( keySpec: keySpec, padSpec: clearPad, keyPressHandler: model)
                         }
-                    }.alignmentGuide(.leading, computeValue: {_ in -30})
+                    }.alignmentGuide(.leading, computeValue: {_ in 0})
 //                    SoftKeyRow( keySpec: skSpec, rowSpec: stockRowSpec, keyPressHandler: model )
 //                        .padding( .vertical, 5 )
                     Spacer()

@@ -171,7 +171,7 @@ protocol StateOperator {
     func transition(_ s0: CalcState ) -> CalcState?
 }
 
-class CalculatorModel: ObservableObject, KeyPressHandler, DisplayHandler {
+class CalculatorModel: ObservableObject, KeyPressHandler {
     // Current Calculator State
     @Published var state = CalcState()
     
@@ -180,16 +180,9 @@ class CalculatorModel: ObservableObject, KeyPressHandler, DisplayHandler {
     // Display window into register stack
     static let displayRows = 3
 
-    // Display buffer
-    @Published var buffer: [RowData] = stackPrefixValues.prefix(displayRows).reversed().map {
-        RowData( prefix: $0, register: 0.0.displayFormat( TypeUntyped.record.digits ) )
-    }
-    
-    @Published var memoryList = [MemoryItem]()
-
     // Numeric entry occurs on X register
-    private var enterMode: Bool = false;
-    private var enterText: String = ""
+    @Published var enterMode: Bool   = false
+    @Published var enterText: String = ""
     
     private let entryKeys:Set<Int> = [key0, key1, key2, key3, key4, key5, key6, key7, key8, key9, dot, sign, back]
     
@@ -200,50 +193,39 @@ class CalculatorModel: ObservableObject, KeyPressHandler, DisplayHandler {
     // *** DisplayHandler Protocol ***
     
     var rowCount: Int { return CalculatorModel.displayRows }
+    var memoryRows: [RowDataItem] { return state.memory }
     
     func getRow( index: Int ) -> RowDataItem {
         let stkIndex = bufferIndex(index)
         
-        if stkIndex == regX && enterMode {
-            
-            buffer[ bufferIndex(regX)].register = "\(enterText)_"
-            buffer[ bufferIndex(regX)].suffix = ""
+        if enterMode && stkIndex == regX {
+            struct EntryRow: RowDataItem {
+                var prefix: String
+                var register: String
+                var suffix: String = ""
+            }
+            return EntryRow( prefix: state.stack[regX].prefix, register: "\(enterText)_")
         }
         return state.stack[ stkIndex ]
     }
     
+    var eText: String { return enterText }
 
     func addMemoryItem() {
+        undoStack.push(state)
         state.memory.append( NamedValue( name: "", value: state.Xtv) )
-        
-        let tr: TypeRecord = getRecord( state.Xt )
-        memoryList.append( MemoryItem( prefix: "", register: state.X.displayFormat( tr.digits), suffix: tr.suffix))
     }
     
     func delMemoryItems( set: IndexSet) {
+        undoStack.push(state)
         state.memory.remove( atOffsets: set )
-        memoryList.remove( atOffsets: set )
     }
     
     func renameMemoryItem( index: Int, newName: String ) {
+        undoStack.push(state)
         state.memory[index].name = newName
+    }
         
-        memoryList[index].row.prefix = newName
-    }
-    
-    func updateDisplay() {
-        for rx in (enterMode ? regY : regX) ... CalculatorModel.displayRows-1 {
-            let tr: TypeRecord = getRecord( state.stack[rx].value.tag )
-            
-            buffer[ bufferIndex(rx) ].register = state.stack[rx].value.reg.displayFormat( tr.digits )
-            buffer[ bufferIndex(rx) ].suffix = tr.suffix
-        }
-        if enterMode {
-            buffer[ bufferIndex(regX)].register = "\(enterText)_"
-            buffer[ bufferIndex(regX)].suffix = ""
-        }
-    }
-    
     class UnaryOp: StateOperator {
         let function: (Double) -> Double
         
@@ -416,8 +398,6 @@ class CalculatorModel: ObservableObject, KeyPressHandler, DisplayHandler {
                 else {
                     enterText.append( String(keyID))
                 }
-                
-                updateDisplay()
                 return
             }
                 
@@ -429,12 +409,10 @@ class CalculatorModel: ObservableObject, KeyPressHandler, DisplayHandler {
         
         if padID == rowCrypto {
             financialKeyPress( (.crypto, keyID - sk0) )
-            updateDisplay()
             return
         }
         else if padID == rowFiat {
             financialKeyPress( (.fiat, keyID - sk0) )
-            updateDisplay()
             return
         }
         
@@ -483,7 +461,6 @@ class CalculatorModel: ObservableObject, KeyPressHandler, DisplayHandler {
             }
             break
         }
-        updateDisplay()
     }
 }
 

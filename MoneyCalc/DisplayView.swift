@@ -126,8 +126,8 @@ struct Display: View {
 // ************************************************************* //
 
 struct MemoryDetailView: View {
+    @Environment(\.presentationMode) var presentationMode: Binding<PresentationMode>
     @StateObject var model: CalculatorModel
-
     @State private var editMode = EditMode.inactive
     @State private var editText = ""
         
@@ -137,8 +137,8 @@ struct MemoryDetailView: View {
     var body: some View {
         Form {
             TextField( "Memory Name", text: $editText,
-                onEditingChanged: { _ in model.renameMemoryItem(index: index, newName: editText) }
-//                onCommit: { model.renameMemoryItem(index: index, newName: editText) }
+                onEditingChanged: { _ in model.renameMemoryItem(index: index, newName: editText) },
+                onCommit: { self.presentationMode.wrappedValue.dismiss() }
             )
             .onAppear {
                 editText = item.prefix
@@ -180,12 +180,34 @@ struct MemoryDisplay: View {
                         }
                         TypedRegister( row: NoPrefix(item), size: .small )
                     }
+                    .swipeActions( edge: .leading, allowsFullSwipe: true ) {
+                        Button {
+                            model.rclMemoryItem(index)
+                        } label: { Text("RCL").bold() }.tint(.mint)
+                        Button {
+                            model.stoMemoryItem(index)
+                        } label: { Text("STO").bold() }.tint(.orange)
+                        Button {
+                            model.plusMemoryItem(index)
+                        } label: { Text("M+").bold() }.tint(.cyan)
+                        Button {
+                            model.minusMemoryItem(index)
+                        } label: { Text("M-").bold() }.tint(.indigo)
+
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                          Button( role: .destructive) {
+                              model.delMemoryItems( set: IndexSet( [index] ))
+                          } label: {
+                              Label("Delete", systemImage: "trash")
+                          }
+                    }
                 }
-                .onDelete( perform: { offsets in model.delMemoryItems( set: offsets) } )
+//                .onDelete( perform: { offsets in model.delMemoryItems( set: offsets) } )
             }
             .navigationBarTitle( "", displayMode: .inline )
             .navigationBarHidden(false)
-            .navigationBarItems( leading: EditButton(), trailing: addButton)
+            .navigationBarItems( trailing: addButton)
             .environment( \.editMode, $editMode)
             .listStyle( PlainListStyle() )
             .padding( .horizontal, 0)

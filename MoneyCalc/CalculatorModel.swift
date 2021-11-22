@@ -212,6 +212,11 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     var eText: String { return enterText }
 
     func addMemoryItem() {
+        if enterMode {
+            state.stack[regX].value.reg = Double(enterText)!
+            state.stack[regX].value.tag = (.untyped, 0)
+            enterMode = false
+        }
         undoStack.push(state)
         state.memory.append( NamedValue( name: "", value: state.Xtv) )
     }
@@ -225,7 +230,51 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         undoStack.push(state)
         state.memory[index].name = newName
     }
-        
+    
+    func rclMemoryItem(_ index: Int ) {
+        enterMode = false
+        undoStack.push(state)
+        if !state.noLift {
+            state.stackLift()
+        }
+        state .noLift = false
+        state.Xtv = state.memory[index].value
+    }
+
+    func stoMemoryItem(_ index: Int ) {
+        if enterMode {
+            state.stack[regX].value.reg = Double(enterText)!
+            state.stack[regX].value.tag = (.untyped, 0)
+            enterMode = false
+        }
+        undoStack.push(state)
+        state.memory[index].value = state.Xtv
+    }
+
+    func plusMemoryItem(_ index: Int ) {
+        if enterMode {
+            state.stack[regX].value.reg = Double(enterText)!
+            state.stack[regX].value.tag = (.untyped, 0)
+            enterMode = false
+        }
+        if state.Xt == state.memory[index].value.tag {
+            undoStack.push(state)
+            state.memory[index].value.reg += state.X
+        }
+    }
+
+    func minusMemoryItem(_ index: Int ) {
+        if enterMode {
+            state.stack[regX].value.reg = Double(enterText)!
+            state.stack[regX].value.tag = (.untyped, 0)
+            enterMode = false
+        }
+        if state.Xt == state.memory[index].value.tag {
+            undoStack.push(state)
+            state.memory[index].value.reg -= state.X
+        }
+    }
+
     class UnaryOp: StateOperator {
         let function: (Double) -> Double
         

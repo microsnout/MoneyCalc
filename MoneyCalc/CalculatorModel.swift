@@ -180,59 +180,71 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     // Display window into register stack
     static let displayRows = 3
 
+    var rowCount: Int { return CalculatorModel.displayRows }
+    var memoryRows: [RowDataItem] { return state.memory }
+    
     // Numeric entry occurs on X register
-    @Published var enterMode: Bool   = false
-    @Published var enterText: String = ""
+    @Published var entryMode: Bool   = false
+    @Published var entryText: String = ""
     
     private let entryKeys:Set<Int> = [key0, key1, key2, key3, key4, key5, key6, key7, key8, key9, dot, sign, back]
     
-    func bufferIndex(_ stackIndex: Int ) -> Int {
-        return CalculatorModel.displayRows - stackIndex - 1
+    private func startTextEntry(_ str: String ) {
+        entryMode = true
+        entryText = str
     }
     
-    // *** DisplayHandler Protocol ***
+    private func acceptTextEntry() {
+        if entryMode {
+            state.stack[regX].value.reg = Double(entryText)!
+            state.stack[regX].value.tag = (.untyped, 0)
+            entryMode = false
+        }
+    }
     
-    var rowCount: Int { return CalculatorModel.displayRows }
-    var memoryRows: [RowDataItem] { return state.memory }
+    private func cancelTextEntry() {
+        entryMode = false
+        entryText = ""
+    }
+    
+    private func bufferIndex(_ stackIndex: Int ) -> Int {
+        return CalculatorModel.displayRows - stackIndex - 1
+    }
     
     func getRow( index: Int ) -> RowDataItem {
         let stkIndex = bufferIndex(index)
         
-        if enterMode && stkIndex == regX {
+        if entryMode && stkIndex == regX {
             struct EntryRow: RowDataItem {
                 var prefix: String
                 var register: String
                 var suffix: String = ""
             }
-            return EntryRow( prefix: state.stack[regX].prefix, register: "\(enterText)_")
+            return EntryRow( prefix: state.stack[regX].prefix, register: "\(entryText)_")
         }
         return state.stack[ stkIndex ]
     }
     
-    var eText: String { return enterText }
-
     func addMemoryItem() {
-        if enterMode {
-            state.stack[regX].value.reg = Double(enterText)!
-            state.stack[regX].value.tag = (.untyped, 0)
-            enterMode = false
-        }
+        acceptTextEntry()
         undoStack.push(state)
         state.memory.append( NamedValue( name: "", value: state.Xtv) )
     }
     
     func delMemoryItems( set: IndexSet) {
+        cancelTextEntry()
         undoStack.push(state)
         state.memory.remove( atOffsets: set )
     }
     
     func renameMemoryItem( index: Int, newName: String ) {
+        cancelTextEntry()
         undoStack.push(state)
         state.memory[index].name = newName
     }
     
     func rclMemoryItem(_ index: Int ) {
-        enterMode = false
+        cancelTextEntry()
         undoStack.push(state)
         if !state.noLift {
             state.stackLift()
@@ -242,21 +254,13 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     }
 
     func stoMemoryItem(_ index: Int ) {
-        if enterMode {
-            state.stack[regX].value.reg = Double(enterText)!
-            state.stack[regX].value.tag = (.untyped, 0)
-            enterMode = false
-        }
+        acceptTextEntry()
         undoStack.push(state)
         state.memory[index].value = state.Xtv
     }
 
     func plusMemoryItem(_ index: Int ) {
-        if enterMode {
-            state.stack[regX].value.reg = Double(enterText)!
-            state.stack[regX].value.tag = (.untyped, 0)
-            enterMode = false
-        }
+        acceptTextEntry()
         if state.Xt == state.memory[index].value.tag {
             undoStack.push(state)
             state.memory[index].value.reg += state.X
@@ -264,11 +268,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     }
 
     func minusMemoryItem(_ index: Int ) {
-        if enterMode {
-            state.stack[regX].value.reg = Double(enterText)!
-            state.stack[regX].value.tag = (.untyped, 0)
-            enterMode = false
-        }
+        acceptTextEntry()
         if state.Xt == state.memory[index].value.tag {
             undoStack.push(state)
             state.memory[index].value.reg -= state.X
@@ -421,38 +421,36 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     func keyPress(_ event: KeyEvent) {
         let (padID, keyID) = event
         
-        if enterMode {
+        if entryMode {
             if entryKeys.contains(keyID) {
                 if keyID == dot {
                     // Decimal is a no-op if one has already been entered
-                    if !enterText.contains(".") { enterText.append(".")}
+                    if !entryText.contains(".") { entryText.append(".")}
                 }
                 else if keyID == sign {
-                    if enterText.starts( with: "-") {
-                        enterText.removeFirst()
+                    if entryText.starts( with: "-") {
+                        entryText.removeFirst()
                     }
                     else {
-                        enterText.insert( "-", at: enterText.startIndex )
+                        entryText.insert( "-", at: entryText.startIndex )
                     }
                 }
                 else if keyID == back {
-                    enterText.removeLast()
+                    entryText.removeLast()
                     
-                    if enterText.isEmpty {
+                    if entryText.isEmpty {
                         // Clear X, exit entry mode, no further actions
                         state.noLift = true
-                        enterMode = false
+                        entryMode = false
                     }
                 }
                 else {
-                    enterText.append( String(keyID))
+                    entryText.append( String(keyID))
                 }
                 return
             }
                 
-            state.stack[regX].value.reg = Double(enterText)!
-            state.stack[regX].value.tag = (.untyped, 0)
-            enterMode = false
+            acceptTextEntry()
             // Fallthrough to switch
         }
         
@@ -467,8 +465,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         
         switch keyID {
         case key0, key1, key2, key3, key4, key5, key6, key7, key8, key9:
-            enterText = String(keyID)
-            enterMode = true
+            startTextEntry( String(keyID) )
             if !state.noLift {
                 state.stackLift()
             }
@@ -476,8 +473,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             break
             
         case dot:
-            enterText = "0."
-            enterMode = true
+            startTextEntry( "0." )
             if !state.noLift {
                 state.stackLift()
             }

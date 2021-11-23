@@ -56,12 +56,13 @@ struct MonoText: View {
 typealias TextSpec = ( prefixFont: Font, registerFont: Font, suffixFont: Font, monoSpace: Double )
 
 enum TextSize {
-    case normal, small
+    case normal, small, large
 }
 
 let textSpecTable: [TextSize: TextSpec] = [
     .normal : ( .footnote, .body, .footnote, 12.0 ),
-    .small  : ( .caption, .footnote, .caption, 9.0 )
+    .small  : ( .caption, .footnote, .caption, 9.0 ),
+    .large  : ( .footnote, .headline, .footnote, 12.0 )
 ]
 
 protocol RowDataItem {
@@ -113,12 +114,12 @@ struct Display: View {
                 .frame(height: rowHeight*Double(model.rowCount) + 15.0)
             VStack( alignment: .leading, spacing: 5) {
                 ForEach (0..<model.rowCount, id: \.self) { index in
-                    TypedRegister( row: model.getRow(index: index), size: .normal ).padding(.leading, 10)
+                    TypedRegister( row: model.getRow(index: index), size: .large ).padding(.leading, 10)
                 }
             }
             .frame( height: rowHeight*Double(model.rowCount) )
         }
-        .padding(15)
+        .padding(10)
         .border(Color("Frame"), width: 10)
     }
 }
@@ -136,10 +137,12 @@ struct MemoryDetailView: View {
 
     var body: some View {
         Form {
-            TextField( "Memory Name", text: $editText,
+            TextField( "-Unnamed-", text: $editText,
                 onEditingChanged: { _ in model.renameMemoryItem(index: index, newName: editText) },
                 onCommit: { self.presentationMode.wrappedValue.dismiss() }
             )
+            .disableAutocorrection(true)
+            .autocapitalization(.none)
             .onAppear {
                 editText = item.prefix
             }

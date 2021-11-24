@@ -181,6 +181,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     static let displayRows = 3
 
     var rowCount: Int { return CalculatorModel.displayRows }
+    
     var memoryRows: [RowDataItem] { return state.memory }
     
     // Numeric entry occurs on X register

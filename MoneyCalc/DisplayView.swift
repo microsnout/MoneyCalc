@@ -158,9 +158,6 @@ struct MemoryDisplay: View {
     
     @State private var editMode = EditMode.inactive
 
-    let colWidth = 9.0
-    let monoFont = Font.footnote
-
     @ViewBuilder
     private var addButton: some View {
         if editMode == .inactive {
@@ -179,7 +176,12 @@ struct MemoryDisplay: View {
                         NavigationLink {
                             MemoryDetailView(  model: model , index: index, item: item )
                         } label: {
-                            Text( item.prefix ).font(monoFont).bold().listRowBackground(Color("List0"))
+                            if item.prefix.isEmpty {
+                                Text( "-Unnamed-" ).font(.footnote).foregroundColor(.gray).listRowBackground(Color("List0"))
+                            }
+                            else {
+                                Text( item.prefix ).font(.footnote).bold().listRowBackground(Color("List0"))
+                            }
                         }
                         TypedRegister( row: NoPrefix(item), size: .small )
                     }
@@ -189,13 +191,13 @@ struct MemoryDisplay: View {
                         } label: { Text("RCL").bold() }.tint(.mint)
                         Button {
                             model.stoMemoryItem(index)
-                        } label: { Text("STO").bold() }.tint(.orange)
+                        } label: { Text("STO").bold() }.tint(.indigo)
                         Button {
                             model.plusMemoryItem(index)
                         } label: { Text("M+").bold() }.tint(.cyan)
                         Button {
                             model.minusMemoryItem(index)
-                        } label: { Text("M-").bold() }.tint(.indigo)
+                        } label: { Text("M-").bold() }.tint(.green)
 
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -206,19 +208,19 @@ struct MemoryDisplay: View {
                           }
                     }
                 }
-//                .onDelete( perform: { offsets in model.delMemoryItems( set: offsets) } )
+                .listRowSeparatorTint(.black)
             }
             .navigationBarTitle( "", displayMode: .inline )
             .navigationBarHidden(false)
             .navigationBarItems( trailing: addButton)
             .environment( \.editMode, $editMode)
-            .listStyle( PlainListStyle() )
+            .listStyle( InsetListStyle() )
             .padding( .horizontal, 0)
             .padding( .top, 0)
-            .background( Color("Background") )
+            .background( Color("List0") )
             .onAppear {
-                UITableView.appearance().backgroundColor = UIColor(Color("Background"))
-                UINavigationBar.appearance().backgroundColor = UIColor(Color("Background"))
+                UITableView.appearance().backgroundColor = UIColor(Color("Display"))
+                UINavigationBar.appearance().backgroundColor = UIColor(Color("Display"))
             }
         }
         .navigationViewStyle( StackNavigationViewStyle())

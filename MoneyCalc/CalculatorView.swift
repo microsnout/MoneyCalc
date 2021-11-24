@@ -7,6 +7,23 @@
 
 import SwiftUI
 
+struct RoundedCorner: Shape {
+
+    var radius: CGFloat = .infinity
+    var corners: UIRectCorner = .allCorners
+
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(roundedRect: rect, byRoundingCorners: corners, cornerRadii: CGSize(width: radius, height: radius))
+        return Path(path.cgPath)
+    }
+}
+
+extension View {
+    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+        clipShape(RoundedCorner(radius: radius, corners: corners))
+    }
+}
+
 let key0 = 0, key1 = 1, key2 = 2, key3 = 3, key4 = 4, key5 = 5, key6 = 6, key7 = 7, key8 = 8, key9 = 9
 
 let plus = 10, minus = 11, times = 12, divide = 13
@@ -111,41 +128,41 @@ struct CalculatorView: View {
     var body: some View {
         ZStack(alignment: .center) {
             Rectangle()
-                .fill(Color("Background"))
-                .edgesIgnoringSafeArea( [.bottom] )
+                .fill(Color("Display"))
+                .edgesIgnoringSafeArea( .all )
             
-            ZStack
+            VStack
             {
-//                Rectangle()
-//                    .stroke( Color.gray )
-//                    .foregroundColor( Color.clear)
-                 
-                VStack(alignment: .center) {
-                    MemoryDisplay( model: model )
-                    Spacer()
-                    Display( model: model )
-                    SoftKeyRow( keySpec: skSpec, rowSpec: cryptoRowSpec, keyPressHandler: model )
-                        .padding( .vertical, 5 )
-                    SoftKeyRow( keySpec: skSpec, rowSpec: fiatRowSpec, keyPressHandler: model )
-                        .padding( .vertical, 5 )
-                    VStack( alignment: .leading) {
-                        HStack {
-                            Keypad( keySpec: keySpec, padSpec: numPad, keyPressHandler: model )
-                            Keypad( keySpec: keySpec, padSpec: opPad, keyPressHandler: model )
-                        }
-                        HStack {
-                            Keypad( keySpec: keySpec, padSpec: enterPad, keyPressHandler: model)
-                            Keypad( keySpec: keySpec, padSpec: clearPad, keyPressHandler: model)
-                        }
-                    }.alignmentGuide(.leading, computeValue: {_ in 0})
-//                    SoftKeyRow( keySpec: skSpec, rowSpec: stockRowSpec, keyPressHandler: model )
-//                        .padding( .vertical, 5 )
-                    Spacer()
-                }
-            }.padding(.horizontal, 30)
-        }
+                MemoryDisplay( model: model )
+                ZStack {
+//                    Rectangle()
+//                        .background(Color("Display"))
+//                        .cornerRadius( 40.0, corners: [.topLeft, .topRight] )
 
-            
+                    VStack(alignment: .center) {
+                        Display( model: model )
+                        SoftKeyRow( keySpec: skSpec, rowSpec: cryptoRowSpec, keyPressHandler: model )
+                            .padding( .vertical, 5 )
+                        SoftKeyRow( keySpec: skSpec, rowSpec: fiatRowSpec, keyPressHandler: model )
+                            .padding( .vertical, 5 )
+                        VStack( alignment: .leading) {
+                            HStack {
+                                Keypad( keySpec: keySpec, padSpec: numPad, keyPressHandler: model )
+                                Keypad( keySpec: keySpec, padSpec: opPad, keyPressHandler: model )
+                            }
+                            HStack {
+                                Keypad( keySpec: keySpec, padSpec: enterPad, keyPressHandler: model)
+                                Keypad( keySpec: keySpec, padSpec: clearPad, keyPressHandler: model)
+                            }
+                        }.alignmentGuide(.leading, computeValue: {_ in 0})
+                    }
+                    .padding(.horizontal, 30)
+                    .padding(.vertical, 20)
+                    .background( Color("Background"))
+                }
+//                .padding(.horizontal, 0)
+            }
+        }
     }
 }
 

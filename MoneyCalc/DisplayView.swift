@@ -66,13 +66,13 @@ let textSpecTable: [TextSize: TextSpec] = [
 ]
 
 protocol RowDataItem {
-    var prefix:   String { get }
-    var register: String { get }
-    var suffix:   String { get }
+    var prefix:   String? { get }
+    var register: String  { get }
+    var suffix:   String  { get }
 }
 
 struct NoPrefix: RowDataItem {
-    let prefix = ""
+    let prefix: String? = ""
     let register: String
     let suffix: String
     
@@ -89,8 +89,8 @@ struct TypedRegister: View {
     var body: some View {
         if let spec = textSpecTable[size] {
             HStack {
-                if !row.prefix.isEmpty {
-                    Text(row.prefix).font(spec.prefixFont).bold().foregroundColor(Color("Frame"))
+                if let prefix = row.prefix {
+                    Text(prefix).font(spec.prefixFont).bold().foregroundColor(Color("Frame"))
                 }
                 MonoText(row.register, charWidth: spec.monoSpace, font: spec.registerFont)
                 Text(row.suffix).font(spec.suffixFont).bold().foregroundColor(Color.gray)
@@ -144,7 +144,9 @@ struct MemoryDetailView: View {
             .disableAutocorrection(true)
             .autocapitalization(.none)
             .onAppear {
-                editText = item.prefix
+                if let name = item.prefix {
+                    editText = name
+                }
             }
 
             TypedRegister( row: NoPrefix(item), size: .normal ).padding( .leading, 0)
@@ -178,11 +180,11 @@ struct MemoryDisplay: View {
                         NavigationLink {
                             MemoryDetailView(  model: model , index: index, item: item )
                         } label: {
-                            if item.prefix.isEmpty {
-                                Text( "-Unnamed-" ).font(.footnote).foregroundColor(.gray).listRowBackground(Color("List0"))
+                            if let prefix = item.prefix {
+                                Text(prefix).font(.footnote).bold().listRowBackground(Color("List0"))
                             }
                             else {
-                                Text( item.prefix ).font(.footnote).bold().listRowBackground(Color("List0"))
+                                Text( "-Unnamed-" ).font(.footnote).foregroundColor(.gray).listRowBackground(Color("List0"))
                             }
                         }
                         TypedRegister( row: NoPrefix(item), size: .small )

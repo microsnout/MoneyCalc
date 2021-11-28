@@ -16,7 +16,7 @@ extension MemoryItem {
         return NSFetchRequest<MemoryItem>(entityName: "MemoryItem")
     }
 
-    @NSManaged public var name: String
+    @NSManaged public var name: String?
     @NSManaged public var tagClass: Int
     @NSManaged public var tagIndex: Int
     @NSManaged public var value: Double

@@ -64,10 +64,15 @@ func getRecord(_ tag: TypeTag ) -> TypeRecord {
 }
 
 struct NamedValue: RowDataItem {
-    var name: String
+    var name: String?
     var value: TaggedValue
     
-    var prefix: String {
+    init(_ name: String? = nil, value: TaggedValue ) {
+        self.name = name
+        self.value = value
+    }
+    
+    var prefix: String? {
         return name
     }
     
@@ -117,7 +122,7 @@ extension MemoryItem {
     
     var namedValue: NamedValue {
         get {
-            return NamedValue( name: self.name, value: self.tv )
+            return NamedValue( self.name, value: self.tv )
         }
         
         set {
@@ -128,10 +133,9 @@ extension MemoryItem {
 }
 
 struct CalcState {
-    var stack: [NamedValue] = stackPrefixValues.map { NamedValue( name: $0, value: untypedZero) }
+    var stack: [NamedValue] = stackPrefixValues.map { NamedValue( $0, value: untypedZero) }
     var lastX: TaggedValue = untypedZero
     var noLift: Bool = false
-    var memory = [NamedValue]()
     
     var X: Double {
         get { stack[regX].value.reg }
@@ -219,7 +223,8 @@ protocol StateOperator {
 class CalculatorModel: ObservableObject, KeyPressHandler {
     // Current Calculator State
     @Published var state = CalcState()
-    
+    @Published var memory = [NamedValue]()
+
     var undoStack = UndoStack()
 
     // Display window into register stack
@@ -227,7 +232,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
 
     var rowCount: Int { return CalculatorModel.displayRows }
     
-    var memoryRows: [RowDataItem] { return state.memory }
+    var memoryRows: [RowDataItem] { return memory }
     
     // Numeric entry occurs on X register
     @Published var entryMode: Bool   = false
@@ -262,7 +267,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         
         if entryMode && stkIndex == regX {
             struct EntryRow: RowDataItem {
-                var prefix: String
+                var prefix: String?
                 var register: String
                 var suffix: String = ""
             }
@@ -282,22 +287,22 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                 state.stackLift()
             }
             state .noLift = false
-            state.Xtv = state.memory[index].value
+            state.Xtv = memory[index].value
             break
             
         case sto:
-            state.memory[index].value = state.Xtv
+            memory[index].value = state.Xtv
             break
             
         case mPlus:
-            if state.Xt == state.memory[index].value.tag {
-                state.memory[index].value.reg += state.X
+            if state.Xt == memory[index].value.tag {
+                memory[index].value.reg += state.X
             }
             break
 
         case mMinus:
-            if state.Xt == state.memory[index].value.tag {
-                state.memory[index].value.reg -= state.X
+            if state.Xt == memory[index].value.tag {
+                memory[index].value.reg -= state.X
             }
             break
 
@@ -308,20 +313,17 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     
     func addMemoryItem() {
         acceptTextEntry()
-        undoStack.push(state)
-        state.memory.append( NamedValue( name: "", value: state.Xtv) )
+        memory.append( NamedValue( value: state.Xtv) )
     }
     
     func delMemoryItems( set: IndexSet) {
         cancelTextEntry()
-        undoStack.push(state)
-        state.memory.remove( atOffsets: set )
+        memory.remove( atOffsets: set )
     }
     
     func renameMemoryItem( index: Int, newName: String ) {
         cancelTextEntry()
-        undoStack.push(state)
-        state.memory[index].name = newName
+        memory[index].name = newName
     }
     
     class UnaryOp: StateOperator {

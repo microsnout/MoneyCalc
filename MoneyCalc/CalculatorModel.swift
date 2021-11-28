@@ -82,6 +82,51 @@ struct NamedValue: RowDataItem {
     }
 }
 
+extension MemoryItem {
+    var typeClass: TypeClass {
+        get {
+            return TypeClass( rawValue: self.tagClass )!
+        }
+        
+        set {
+            self.tagClass = newValue.rawValue
+        }
+    }
+    
+    var tag: TypeTag {
+        get {
+            return (self.typeClass, TypeIndex(self.tagIndex) )
+        }
+        
+        set {
+            self.tagClass = newValue.class.rawValue
+            self.tagIndex = newValue.index
+        }
+    }
+    
+    var tv: TaggedValue {
+        get {
+            return ( self.tag, self.value )
+        }
+        
+        set {
+            self.tag = newValue.tag
+            self.value = newValue.reg
+        }
+    }
+    
+    var namedValue: NamedValue {
+        get {
+            return NamedValue( name: self.name, value: self.tv )
+        }
+        
+        set {
+            self.name = newValue.name
+            self.tv = newValue.value
+        }
+    }
+}
+
 struct CalcState {
     var stack: [NamedValue] = stackPrefixValues.map { NamedValue( name: $0, value: untypedZero) }
     var lastX: TaggedValue = untypedZero
@@ -226,6 +271,41 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         return state.stack[ stkIndex ]
     }
     
+    func memoryOp( key: KeyID, index: Int ) {
+        acceptTextEntry()
+        
+        // Leading edge swipe operations
+        switch key {
+        case rcl:
+            undoStack.push(state)
+            if !state.noLift {
+                state.stackLift()
+            }
+            state .noLift = false
+            state.Xtv = state.memory[index].value
+            break
+            
+        case sto:
+            state.memory[index].value = state.Xtv
+            break
+            
+        case mPlus:
+            if state.Xt == state.memory[index].value.tag {
+                state.memory[index].value.reg += state.X
+            }
+            break
+
+        case mMinus:
+            if state.Xt == state.memory[index].value.tag {
+                state.memory[index].value.reg -= state.X
+            }
+            break
+
+        default:
+            break
+        }
+    }
+    
     func addMemoryItem() {
         acceptTextEntry()
         undoStack.push(state)
@@ -244,38 +324,6 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         state.memory[index].name = newName
     }
     
-    func rclMemoryItem(_ index: Int ) {
-        cancelTextEntry()
-        undoStack.push(state)
-        if !state.noLift {
-            state.stackLift()
-        }
-        state .noLift = false
-        state.Xtv = state.memory[index].value
-    }
-
-    func stoMemoryItem(_ index: Int ) {
-        acceptTextEntry()
-        undoStack.push(state)
-        state.memory[index].value = state.Xtv
-    }
-
-    func plusMemoryItem(_ index: Int ) {
-        acceptTextEntry()
-        if state.Xt == state.memory[index].value.tag {
-            undoStack.push(state)
-            state.memory[index].value.reg += state.X
-        }
-    }
-
-    func minusMemoryItem(_ index: Int ) {
-        acceptTextEntry()
-        if state.Xt == state.memory[index].value.tag {
-            undoStack.push(state)
-            state.memory[index].value.reg -= state.X
-        }
-    }
-
     class UnaryOp: StateOperator {
         let function: (Double) -> Double
         

@@ -32,7 +32,7 @@ struct Key: Identifiable {
     let size: Int
     let fontSize:Double?
     
-    init(_ id: Int, _ ch: String, size: Int = 1, fontSize: Double? = nil ) {
+    init(_ id: KeyID, _ ch: String, size: Int = 1, fontSize: Double? = nil ) {
         self.id = id
         self.ch = ch
         self.size = size
@@ -101,7 +101,7 @@ struct SoftKey: Identifiable {
     let id: KeyID
     let ch: String
     
-    init(_ id: Int, _ ch: String ) {
+    init(_ id: KeyID, _ ch: String ) {
         self.id = id
         self.ch = ch
     }

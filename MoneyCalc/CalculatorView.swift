@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreData
 
 struct RoundedCorner: Shape {
 
@@ -124,6 +125,13 @@ struct CalculatorView: View {
     )
 
     // **************************
+    
+    let swipeLeadingOpTable: [(Int, String, Color)] = [
+        ( rcl,    "RCL", .mint ),
+        ( sto,    "STO", .indigo ),
+        ( mPlus,  "M+",  .cyan  ),
+        ( mMinus, "M-",  .green )
+    ]
 
     var body: some View {
         ZStack(alignment: .center) {
@@ -133,7 +141,7 @@ struct CalculatorView: View {
             
             VStack
             {
-                MemoryDisplay( model: model )
+                MemoryDisplay( model: model, leadingOps: swipeLeadingOpTable )
                 ZStack {
 //                    Rectangle()
 //                        .background(Color("Display"))

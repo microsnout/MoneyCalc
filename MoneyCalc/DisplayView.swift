@@ -47,7 +47,7 @@ struct MonoText: View {
             ForEach(0..<self.content.count, id: \.self) { index in
                 Text("\(self.content[self.content.index(self.content.startIndex, offsetBy: index)].description)")
                     .font(font)
-                    .foregroundColor(Color.black).frame(width: self.charWidth)
+                    .foregroundColor(Color("DisplayText")).frame(width: self.charWidth)
             }
         }
     }
@@ -110,7 +110,7 @@ struct Display: View {
     var body: some View {
         ZStack(alignment: .leading) {
             Rectangle()
-                .fill(Color("List0"))
+                .fill(Color("Display"))
                 .frame(height: rowHeight*Double(model.rowCount) + 15.0)
             VStack( alignment: .leading, spacing: 5) {
                 ForEach (0..<model.rowCount, id: \.self) { index in
@@ -156,6 +156,8 @@ struct MemoryDetailView: View {
 struct MemoryDisplay: View {
     @StateObject var model: CalculatorModel
     
+    let leadingOps: [(key: Int, text: String, color: Color)]
+    
     @State private var editMode = EditMode.inactive
 
     @ViewBuilder
@@ -186,21 +188,13 @@ struct MemoryDisplay: View {
                         TypedRegister( row: NoPrefix(item), size: .small )
                     }
                     .swipeActions( edge: .leading, allowsFullSwipe: true ) {
-                        Button {
-                            model.rclMemoryItem(index)
-                        } label: { Text("RCL").bold() }.tint(.mint)
-                        Button {
-                            model.stoMemoryItem(index)
-                        } label: { Text("STO").bold() }.tint(.indigo)
-                        Button {
-                            model.plusMemoryItem(index)
-                        } label: { Text("M+").bold() }.tint(.cyan)
-                        Button {
-                            model.minusMemoryItem(index)
-                        } label: { Text("M-").bold() }.tint(.green)
-
+                        ForEach ( leadingOps, id: \.key) { key, text, color in
+                            Button {
+                                model.memoryOp( key: key, index: index )
+                            } label: { Text(text).bold() }.tint(color)
+                        }
                     }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    .swipeActions( edge: .trailing, allowsFullSwipe: false) {
                           Button( role: .destructive) {
                               model.delMemoryItems( set: IndexSet( [index] ))
                           } label: {
@@ -208,7 +202,7 @@ struct MemoryDisplay: View {
                           }
                     }
                 }
-                .listRowSeparatorTint(.black)
+                .listRowSeparatorTint( Color("DisplayText"))
             }
             .navigationBarTitle( "", displayMode: .inline )
             .navigationBarHidden(false)

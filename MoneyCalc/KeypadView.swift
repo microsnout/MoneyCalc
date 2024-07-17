@@ -27,10 +27,10 @@ struct KeySpec {
 }
 
 struct Key: Identifiable {
-    let id: KeyID
-    let ch: String
-    let size: Int
-    let fontSize:Double?
+    var id: KeyID
+    var ch: String
+    var size: Int
+    var fontSize:Double?
     
     init(_ id: KeyID, _ ch: String, size: Int = 1, fontSize: Double? = nil ) {
         self.id = id
@@ -41,17 +41,17 @@ struct Key: Identifiable {
 }
 
 struct PadSpec {
-    let id: PadID
-    let rows: Int
-    let cols: Int
-    let keys: [Key]
-    let fontSize = 20.0
+    var id: PadID
+    var rows: Int
+    var cols: Int
+    var keys: [Key]
+    var fontSize = 20.0
 }
 
 struct Keypad: View {
     
-    let keySpec: KeySpec
-    let padSpec: PadSpec
+    var keySpec: KeySpec
+    var padSpec: PadSpec
     
     var keyPressHandler:  KeyPressHandler
     
@@ -65,7 +65,7 @@ struct Keypad: View {
             alignment: .leading,
             spacing: keySpec.spacing
         ) {
-            ForEach(padSpec.keys, id: \.id) { key in
+            ForEach(padSpec.keys) { key in
                 Button( action: {
                     keyPressHandler.keyPress( (padSpec.id, key.id) )
                 })
@@ -98,8 +98,8 @@ struct Keypad: View {
 // ********************************************
 
 struct SoftKey: Identifiable {
-    let id: KeyID
-    let ch: String
+    var id: KeyID
+    var ch: String
     
     init(_ id: KeyID, _ ch: String ) {
         self.id = id
@@ -108,16 +108,16 @@ struct SoftKey: Identifiable {
 }
 
 struct RowSpec {
-    let id: RowID
-    let keys: [SoftKey]
-    let fontSize: Double
-    let caption: String
+    var id: RowID
+    var keys: [SoftKey]
+    var fontSize: Double
+    var caption: String
 }
 
 struct SoftKeyRow: View {
     
-    let keySpec: KeySpec
-    let rowSpec: RowSpec
+    var keySpec: KeySpec
+    var rowSpec: RowSpec
     
     var keyPressHandler:  KeyPressHandler
     

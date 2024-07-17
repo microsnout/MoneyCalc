@@ -149,8 +149,8 @@ struct CalculatorView: View {
 
                     VStack(alignment: .center) {
                         Display( model: model )
-                        SoftKeyRow( keySpec: skSpec, rowSpec: cryptoRowSpec, keyPressHandler: model )
-                            .padding( .vertical, 5 )
+//                        SoftKeyRow( keySpec: skSpec, rowSpec: cryptoRowSpec, keyPressHandler: model )
+//                            .padding( .vertical, 5 )
                         SoftKeyRow( keySpec: skSpec, rowSpec: fiatRowSpec, keyPressHandler: model )
                             .padding( .vertical, 5 )
                         VStack( alignment: .leading) {

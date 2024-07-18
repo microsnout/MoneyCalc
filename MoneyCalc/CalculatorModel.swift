@@ -7,8 +7,10 @@
 
 import Foundation
 
+// Standard HP calculator registers
 let stackPrefixValues = ["X", "Y", "Z", "T"]
 
+// Register index values
 let regX = 0, regY = 1, regZ = 2, regT = 3, stackSize = 4
 
 enum TypeClass: Int {
@@ -259,6 +261,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     }
     
     private func bufferIndex(_ stackIndex: Int ) -> Int {
+        // Convert a bottom up index into the stack array to a top down index into the displayed registers
         return CalculatorModel.displayRows - stackIndex - 1
     }
     

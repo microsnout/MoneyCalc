@@ -139,6 +139,8 @@ struct CalcState {
     var lastX: TaggedValue = untypedZero
     var noLift: Bool = false
     var memory = [NamedValue]()
+    var entryMode: Bool   = false
+    var entryText: String = ""
 
     var X: Double {
         get { stack[regX].value.reg }
@@ -235,28 +237,24 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     
     var memoryRows: [RowDataItem] { return state.memory }
     
-    // Numeric entry occurs on X register
-    @Published var entryMode: Bool   = false
-    @Published var entryText: String = ""
-    
     private let entryKeys:Set<Int> = [key0, key1, key2, key3, key4, key5, key6, key7, key8, key9, dot, sign, back]
     
     private func startTextEntry(_ str: String ) {
-        entryMode = true
-        entryText = str
+        state.entryMode = true
+        state.entryText = str
     }
     
     private func acceptTextEntry() {
-        if entryMode {
-            state.stack[regX].value.reg = Double(entryText)!
+        if state.entryMode {
+            state.stack[regX].value.reg = Double(state.entryText)!
             state.stack[regX].value.tag = (.untyped, 0)
-            entryMode = false
+            state.entryMode = false
         }
     }
     
     private func cancelTextEntry() {
-        entryMode = false
-        entryText = ""
+        state.entryMode = false
+        state.entryText = ""
     }
     
     private func bufferIndex(_ stackIndex: Int ) -> Int {
@@ -267,20 +265,20 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     func getRow( index: Int ) -> RowDataItem {
         let stkIndex = bufferIndex(index)
         
-        if entryMode && stkIndex == regX {
+        if state.entryMode && stkIndex == regX {
             struct EntryRow: RowDataItem {
                 var prefix: String?
                 var register: String
                 var suffix: String = ""
             }
-            return EntryRow( prefix: state.stack[regX].prefix, register: "\(entryText)_")
+            return EntryRow( prefix: state.stack[regX].prefix, register: "\(state.entryText)_")
         }
         return state.stack[ stkIndex ]
     }
     
     func memoryOp( key: KeyID, index: Int ) {
-        acceptTextEntry()
         undoStack.push(state)
+        acceptTextEntry()
 
         // Leading edge swipe operations
         switch key {
@@ -477,44 +475,45 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     func keyPress(_ event: KeyEvent) {
         let (padID, keyID) = event
         
-        if entryMode {
+        if state.entryMode {
             if entryKeys.contains(keyID) {
                 if keyID == dot {
                     // Decimal is a no-op if one has already been entered
-                    if !entryText.contains(".") { entryText.append(".")}
+                    if !state.entryText.contains(".") { state.entryText.append(".")}
                 }
                 else if keyID == sign {
-                    if entryText.starts( with: "-") {
-                        entryText.removeFirst()
+                    if state.entryText.starts( with: "-") {
+                        state.entryText.removeFirst()
                     }
                     else {
-                        entryText.insert( "-", at: entryText.startIndex )
+                        state.entryText.insert( "-", at: state.entryText.startIndex )
                     }
                 }
                 else if keyID == back {
-                    entryText.removeLast()
+                    state.entryText.removeLast()
                     
-                    if entryText.isEmpty {
+                    if state.entryText.isEmpty {
                         // Clear X, exit entry mode, no further actions
                         state.noLift = true
-                        entryMode = false
+                        state.entryMode = false
                     }
                 }
                 else {
-                    entryText.append( String(keyID))
+                    state.entryText.append( String(keyID))
                 }
                 return
             }
                 
-            acceptTextEntry()
             // Fallthrough to switch
         }
         
         if padID == rowCrypto {
+            acceptTextEntry()
             financialKeyPress( (.crypto, keyID - sk0) )
             return
         }
         else if padID == rowFiat {
+            acceptTextEntry()
             financialKeyPress( (.fiat, keyID - sk0) )
             return
         }
@@ -525,7 +524,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             if !state.noLift {
                 state.stackLift()
             }
-            state .noLift = false
+            state.noLift = false
             break
             
         case dot:
@@ -533,7 +532,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             if !state.noLift {
                 state.stackLift()
             }
-            state .noLift = false
+            state.noLift = false
             break
             
         case back:
@@ -556,11 +555,17 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         default:
             if let op = opTable[keyID] {
                 // Transition to new calculator state based on operation
+                undoStack.push(state)
+                acceptTextEntry()
                 if let newState = op.transition( state ) {
-                    undoStack.push(state)
                     state = newState
                 }
-                // else no-op as there was no new state
+                else {
+                    // else no-op as there was no new state
+                    if let lastState = undoStack.pop() {
+                        state = lastState
+                    }
+                }
             }
             break
         }

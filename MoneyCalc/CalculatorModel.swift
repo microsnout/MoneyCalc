@@ -138,7 +138,8 @@ struct CalcState {
     var stack: [NamedValue] = stackPrefixValues.map { NamedValue( $0, value: untypedZero) }
     var lastX: TaggedValue = untypedZero
     var noLift: Bool = false
-    
+    var memory = [NamedValue]()
+
     var X: Double {
         get { stack[regX].value.reg }
         set { stack[regX].value.reg = newValue }
@@ -225,16 +226,14 @@ protocol StateOperator {
 class CalculatorModel: ObservableObject, KeyPressHandler {
     // Current Calculator State
     @Published var state = CalcState()
-    @Published var memory = [NamedValue]()
 
     var undoStack = UndoStack()
 
     // Display window into register stack
     static let displayRows = 3
-
     var rowCount: Int { return CalculatorModel.displayRows }
     
-    var memoryRows: [RowDataItem] { return memory }
+    var memoryRows: [RowDataItem] { return state.memory }
     
     // Numeric entry occurs on X register
     @Published var entryMode: Bool   = false
@@ -281,31 +280,31 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     
     func memoryOp( key: KeyID, index: Int ) {
         acceptTextEntry()
-        
+        undoStack.push(state)
+
         // Leading edge swipe operations
         switch key {
         case rcl:
-            undoStack.push(state)
             if !state.noLift {
                 state.stackLift()
             }
             state .noLift = false
-            state.Xtv = memory[index].value
+            state.Xtv = state.memory[index].value
             break
             
         case sto:
-            memory[index].value = state.Xtv
+            state.memory[index].value = state.Xtv
             break
             
         case mPlus:
-            if state.Xt == memory[index].value.tag {
-                memory[index].value.reg += state.X
+            if state.Xt == state.memory[index].value.tag {
+                state.memory[index].value.reg += state.X
             }
             break
 
         case mMinus:
-            if state.Xt == memory[index].value.tag {
-                memory[index].value.reg -= state.X
+            if state.Xt == state.memory[index].value.tag {
+                state.memory[index].value.reg -= state.X
             }
             break
 
@@ -316,17 +315,20 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     
     func addMemoryItem() {
         acceptTextEntry()
-        memory.append( NamedValue( value: state.Xtv) )
+        undoStack.push(state)
+        state.memory.append( NamedValue( value: state.Xtv) )
     }
     
     func delMemoryItems( set: IndexSet) {
         cancelTextEntry()
-        memory.remove( atOffsets: set )
+        undoStack.push(state)
+        state.memory.remove( atOffsets: set )
     }
     
     func renameMemoryItem( index: Int, newName: String ) {
         cancelTextEntry()
-        memory[index].name = newName
+        undoStack.push(state)
+        state.memory[index].name = newName
     }
     
     class UnaryOp: StateOperator {
@@ -535,6 +537,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             break
             
         case back:
+            // Undo last operation by restoring previous state
             if let lastState = undoStack.pop() {
                 state = lastState
             }
@@ -552,6 +555,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             
         default:
             if let op = opTable[keyID] {
+                // Transition to new calculator state based on operation
                 if let newState = op.transition( state ) {
                     undoStack.push(state)
                     state = newState

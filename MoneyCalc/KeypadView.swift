@@ -29,26 +29,19 @@ struct KeySpec {
 
 struct Key: Identifiable {
     var id: KeyID
-    var ch: String
-    var size: Int
+    var size: Int           // Either 1 or 2, single width keys or double width
+    var text: String?
     var fontSize:Double?
     var image: Image?
     
-    init(_ id: KeyID, _ label: String? = nil, size: Int = 1, fontSize: Double? = nil, sfImage: String? = nil ) {
+    init(_ id: KeyID, _ label: String? = nil, size: Int = 1, fontSize: Double? = nil, image: ImageResource? = nil ) {
         self.id = id
-        
-        if let text = label {
-            self.ch = text
-        }
-        else {
-            self.ch = ""
-        }
-        
+        self.text = label
         self.size = size
         self.fontSize = fontSize
         
-        if let sfName = sfImage{
-            self.image = Image(sfName)
+        if let iRes = image {
+            self.image = Image(iRes)
         }
         else {
             self.image = nil
@@ -98,7 +91,7 @@ struct Keypad: View {
                             .shadow(radius: keySpec.radius)
                             .overlay( image.foregroundColor(keySpec.textColor), alignment: .center)
                     }
-                    else {
+                    else if let label = key.text {
                         Rectangle()
                             .foregroundColor(keySpec.buttonColor)
                             .frame( width: key.size == 2 ?
@@ -109,7 +102,7 @@ struct Keypad: View {
                             .cornerRadius(keySpec.radius)
                             .shadow(radius: keySpec.radius)
                             .overlay(
-                                Text("\(key.ch)")
+                                Text(label)
                                     .font(.system(size: key.fontSize == nil ? padSpec.fontSize : key.fontSize! ))
                                     .background( keySpec.buttonColor)
                                     .foregroundColor( keySpec.textColor),

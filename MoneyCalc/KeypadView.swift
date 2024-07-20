@@ -32,12 +32,27 @@ struct Key: Identifiable {
     var ch: String
     var size: Int
     var fontSize:Double?
+    var image: Image?
     
-    init(_ id: KeyID, _ ch: String, size: Int = 1, fontSize: Double? = nil ) {
+    init(_ id: KeyID, _ label: String? = nil, size: Int = 1, fontSize: Double? = nil, sfImage: String? = nil ) {
         self.id = id
-        self.ch = ch
+        
+        if let text = label {
+            self.ch = text
+        }
+        else {
+            self.ch = ""
+        }
+        
         self.size = size
         self.fontSize = fontSize
+        
+        if let sfName = sfImage{
+            self.image = Image(sfName)
+        }
+        else {
+            self.image = nil
+        }
     }
 }
 
@@ -71,21 +86,35 @@ struct Keypad: View {
                     keyPressHandler.keyPress( (padSpec.id, key.id) )
                 })
                 {
-                    Rectangle()
-                        .foregroundColor(keySpec.buttonColor)
-                        .frame( width: key.size == 2 ?
-                                        keySpec.width * 2.0 + keySpec.spacing :
+                    if let image = key.image {
+                        Rectangle()
+                            .foregroundColor(keySpec.buttonColor)
+                            .frame( width: key.size == 2 ?
+                                    keySpec.width * 2.0 + keySpec.spacing :
                                         keySpec.width,
-                               height: keySpec.height,
-                               alignment: .center)
-                        .cornerRadius(keySpec.radius)
-                        .shadow(radius: keySpec.radius)
-                        .overlay(
-                            Text("\(key.ch)")
-                                .font(.system(size: key.fontSize == nil ? padSpec.fontSize : key.fontSize! ))
-                                .background( keySpec.buttonColor)
-                                .foregroundColor( keySpec.textColor),
-                            alignment: .center)
+                                    height: keySpec.height,
+                                    alignment: .center)
+                            .cornerRadius(keySpec.radius)
+                            .shadow(radius: keySpec.radius)
+                            .overlay( image.foregroundColor(keySpec.textColor), alignment: .center)
+                    }
+                    else {
+                        Rectangle()
+                            .foregroundColor(keySpec.buttonColor)
+                            .frame( width: key.size == 2 ?
+                                    keySpec.width * 2.0 + keySpec.spacing :
+                                        keySpec.width,
+                                    height: keySpec.height,
+                                    alignment: .center)
+                            .cornerRadius(keySpec.radius)
+                            .shadow(radius: keySpec.radius)
+                            .overlay(
+                                Text("\(key.ch)")
+                                    .font(.system(size: key.fontSize == nil ? padSpec.fontSize : key.fontSize! ))
+                                    .background( keySpec.buttonColor)
+                                    .foregroundColor( keySpec.textColor),
+                                alignment: .center)
+                    }
                 }
                 
                 if key.size == 2 { Color.clear }

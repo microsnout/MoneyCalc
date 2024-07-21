@@ -2,9 +2,9 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="4.9764404mm"
-   height="4.2043948mm"
-   viewBox="0 0 4.9764404 4.2043948"
+   width="5.2954292mm"
+   height="4.4738951mm"
+   viewBox="0 0 5.2954292 4.4738951"
    version="1.1"
    id="svg1"
    xmlns="http://www.w3.org/2000/svg"
@@ -13,16 +13,26 @@
      id="defs1" />
   <g
      id="layer1"
-     transform="translate(-68.324953,-101.47596)">
+     transform="translate(-65.551538,-102.61328)">
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:6.35px;font-family:Serif;-inkscape-font-specification:'Serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;stroke-width:0.264583"
-       x="68.191628"
-       y="105.68034"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:6.75703px;font-family:Serif;-inkscape-font-specification:'Serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;stroke-width:0.281542"
+       x="65.409668"
+       y="107.08717"
        id="text13"><tspan
          id="tspan13"
-         style="stroke-width:0.264583"
-         x="68.191628"
-         y="105.68034">ln</tspan></text>
+         style="stroke-width:0.281542"
+         x="65.409668"
+         y="107.08717">ln</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:6.75703px;font-family:Serif;-inkscape-font-specification:'Serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;stroke-width:0.281542"
+       x="65.409668"
+       y="107.08717"
+       id="text24"><tspan
+         id="tspan24"
+         style="stroke-width:0.281542"
+         x="65.409668"
+         y="107.08717">ln</tspan></text>
   </g>
 </svg>

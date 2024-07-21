@@ -59,9 +59,9 @@ struct CalculatorView: View {
     let opPad = PadSpec(
         id: padOp,
         rows: 4, cols: 3,
-        keys: [ Key(divide, "÷"), Key(fixL, ".00\u{2190}", fontSize: 12), Key(sto, "STO", fontSize: 12),
-                Key(times, "×"),  Key(fixR, ".00\u{2192}", fontSize: 12), Key(rcl, "RCL", fontSize: 12),
-                Key(minus, "−"),  Key(xy, "X\u{21c6}Y", fontSize: 12),    Key(mPlus, "M+", fontSize: 12),
+        keys: [ Key(divide, "÷"), Key(fixL, ".00\u{2190}", fontSize: 12), Key(sto, image: .yx),
+                Key(times, "×"),  Key(fixR, ".00\u{2192}", fontSize: 12), Key(rcl, image: .onex),
+                Key(minus, "−"),  Key(xy, "X\u{21c6}Y", fontSize: 12),    Key(mPlus, image: .x2),
                 Key(plus,  "+"),  Key(roll, "R\u{2193}", fontSize: 12),   Key(mMinus, image: .rx)
               ])
     

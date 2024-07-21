@@ -2,9 +2,9 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="7.7100306mm"
-   height="4.9281149mm"
-   viewBox="0 0 7.7100306 4.9281149"
+   width="8.2042351mm"
+   height="5.2439952mm"
+   viewBox="0 0 8.2042351 5.2439952"
    version="1.1"
    id="svg1"
    xmlns="http://www.w3.org/2000/svg"
@@ -13,10 +13,10 @@
      id="defs1" />
   <g
      id="layer1"
-     transform="translate(-52.237497,-113.07669)">
+     transform="translate(-48.432897,-114.95762)">
     <g
        id="g18"
-       transform="matrix(1.3825372,0,0,1.3825372,-14.670806,-64.370118)">
+       transform="matrix(1.4711563,0,0,1.4711563,-22.764153,-73.86334)">
       <text
          xml:space="preserve"
          style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:3.52778px;font-family:Serif;-inkscape-font-specification:'Serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;stroke-width:0.264583"
@@ -31,6 +31,24 @@
          style="fill:#000000;stroke-width:0.264583"
          d="m 53.972025,128.60491 c -3.714321,0 -3.770175,0 -3.770175,0 l -0.886457,3.3083 -0.920094,-1.59365 0.883767,0.88377 0.764902,-2.85466 h 3.844277 z"
          id="path18" />
+    </g>
+    <g
+       id="g32"
+       transform="matrix(1.4711563,0,0,1.4711563,-22.764153,-73.86334)">
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:3.52778px;font-family:Serif;-inkscape-font-specification:'Serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;stroke-width:0.264583"
+         x="50.564945"
+         y="131.37735"
+         id="text32"><tspan
+           id="tspan32"
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:3.52778px;font-family:Serif;-inkscape-font-specification:'Serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;stroke-width:0.264583"
+           x="50.564945"
+           y="131.37735">x</tspan></text>
+      <path
+         style="fill:#000000;stroke-width:0.264583"
+         d="m 53.972025,128.60491 c -3.714321,0 -3.770175,0 -3.770175,0 l -0.886457,3.3083 -0.920094,-1.59365 0.883767,0.88377 0.764902,-2.85466 h 3.844277 z"
+         id="path32" />
     </g>
   </g>
 </svg>

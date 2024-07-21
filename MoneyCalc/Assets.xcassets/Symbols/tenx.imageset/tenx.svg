@@ -2,9 +2,9 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="6.1429911mm"
-   height="4.1882701mm"
-   viewBox="0 0 6.1429911 4.1882701"
+   width="6.5367475mm"
+   height="4.4567451mm"
+   viewBox="0 0 6.5367475 4.4567451"
    version="1.1"
    id="svg1"
    xmlns="http://www.w3.org/2000/svg"
@@ -13,10 +13,10 @@
      id="defs1" />
   <g
      id="layer1"
-     transform="translate(-25.239892,-113.11308)">
+     transform="translate(-19.704779,-114.99633)">
     <g
        id="g15"
-       transform="matrix(1.2427624,0,0,1.2427624,-29.657044,-26.536472)">
+       transform="matrix(1.3224221,0,0,1.3224221,-38.710992,-33.604598)">
       <text
          xml:space="preserve"
          style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:3.52778px;font-family:Serif;-inkscape-font-specification:'Serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;stroke-width:0.264583"
@@ -34,6 +34,30 @@
          y="115.69217"
          id="text15"><tspan
            id="tspan15"
+           style="stroke-width:0.264583"
+           x="43.940773"
+           y="115.69217">10</tspan></text>
+    </g>
+    <g
+       id="g28"
+       transform="matrix(1.3224221,0,0,1.3224221,-38.710992,-33.604598)">
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:3.52778px;font-family:Serif;-inkscape-font-specification:'Serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;stroke-width:0.264583"
+         x="47.409283"
+         y="113.98085"
+         id="text27"><tspan
+           id="tspan27"
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:3.52778px;font-family:Serif;-inkscape-font-specification:'Serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;stroke-width:0.264583"
+           x="47.409283"
+           y="113.98085">x</tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:3.52777px;font-family:Serif;-inkscape-font-specification:'Serif, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#000000;stroke-width:0.264583"
+         x="43.940773"
+         y="115.69217"
+         id="text28"><tspan
+           id="tspan28"
            style="stroke-width:0.264583"
            x="43.940773"
            y="115.69217">10</tspan></text>

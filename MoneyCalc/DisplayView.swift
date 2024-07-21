@@ -174,49 +174,54 @@ struct MemoryDisplay: View {
     
     var body: some View {
         NavigationView {
-            List {
-                ForEach ( Array( model.memoryRows.enumerated()), id: \.offset ) { index, item in
-                    VStack( alignment: .leading ) {
-                        NavigationLink {
-                            MemoryDetailView(  model: model , index: index, item: item )
-                        } label: {
-                            if let prefix = item.prefix {
-                                Text(prefix).font(.footnote).bold().listRowBackground(Color("List0"))
-                            }
-                            else {
-                                Text( "-Unnamed-" ).font(.footnote).foregroundColor(.gray).listRowBackground(Color("List0"))
-                            }
-                        }
-                        TypedRegister( row: NoPrefix(item), size: .small )
-                    }
-                    .swipeActions( edge: .leading, allowsFullSwipe: true ) {
-                        ForEach ( leadingOps, id: \.key) { key, text, color in
-                            Button {
-                                model.memoryOp( key: key, index: index )
-                            } label: { Text(text).bold() }.tint(color)
-                        }
-                    }
-                    .swipeActions( edge: .trailing, allowsFullSwipe: false) {
-                          Button( role: .destructive) {
-                              model.delMemoryItems( set: IndexSet( [index] ))
-                          } label: {
-                              Label("Delete", systemImage: "trash")
-                          }
-                    }
-                }
-                .listRowSeparatorTint( Color("DisplayText"))
+            if model.memoryRows.isEmpty {
+                Text("Memory List\n(Press + to store X register)")
+                    .navigationBarTitle( "", displayMode: .inline )
+                    .navigationBarHidden(false)
+                    .navigationBarItems( trailing: addButton)
+                    .foregroundColor(/*@START_MENU_TOKEN@*/.blue/*@END_MENU_TOKEN@*/)
             }
-            .navigationBarTitle( "", displayMode: .inline )
-            .navigationBarHidden(false)
-            .navigationBarItems( trailing: addButton)
-            .environment( \.editMode, $editMode)
-            .listStyle( InsetListStyle() )
-            .padding( .horizontal, 0)
-            .padding( .top, 0)
-            .background( Color("List0") )
-            .onAppear {
-                UITableView.appearance().backgroundColor = UIColor(Color("Display"))
-                UINavigationBar.appearance().backgroundColor = UIColor(Color("Display"))
+            else {
+                List {
+                    ForEach ( Array( model.memoryRows.enumerated()), id: \.offset ) { index, item in
+                        VStack( alignment: .leading ) {
+                            NavigationLink {
+                                MemoryDetailView(  model: model , index: index, item: item )
+                            } label: {
+                                if let prefix = item.prefix {
+                                    Text(prefix).font(.footnote).bold().listRowBackground(Color("List0"))
+                                }
+                                else {
+                                    Text( "-Unnamed-" ).font(.footnote).foregroundColor(.gray).listRowBackground(Color("List0"))
+                                }
+                            }
+                            TypedRegister( row: NoPrefix(item), size: .small )
+                        }
+                        .swipeActions( edge: .leading, allowsFullSwipe: true ) {
+                            ForEach ( leadingOps, id: \.key) { key, text, color in
+                                Button {
+                                    model.memoryOp( key: key, index: index )
+                                } label: { Text(text).bold() }.tint(color)
+                            }
+                        }
+                        .swipeActions( edge: .trailing, allowsFullSwipe: false) {
+                            Button( role: .destructive) {
+                                model.delMemoryItems( set: IndexSet( [index] ))
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
+                    .listRowSeparatorTint( Color("DisplayText"))
+                    
+                }
+                .navigationBarTitle( "", displayMode: .inline )
+                .navigationBarHidden(false)
+                .navigationBarItems( trailing: addButton)
+                .environment( \.editMode, $editMode)
+                .listStyle( InsetListStyle() )
+                .padding( .horizontal, 0)
+                .padding( .top, 0)
             }
         }
         .navigationViewStyle( StackNavigationViewStyle())

@@ -64,8 +64,18 @@ struct Keypad: View {
     
     var keyPressHandler:  KeyPressHandler
     
+    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+    
     private var columns: [GridItem] {
         Array(repeating: .init(.fixed(keySpec.width)), count: padSpec.cols)
+    }
+    
+    init( keySpec: KeySpec, padSpec: PadSpec, keyPressHandler: KeyPressHandler ) {
+        self.keySpec = keySpec
+        self.padSpec = padSpec
+        self.keyPressHandler = keyPressHandler
+        
+        impactFeedback.prepare()
     }
     
     var body: some View {
@@ -77,6 +87,7 @@ struct Keypad: View {
             ForEach(padSpec.keys) { key in
                 Button( action: {
                     keyPressHandler.keyPress( (padSpec.id, key.id) )
+                    impactFeedback.impactOccurred()
                 })
                 {
                     if let image = key.image {

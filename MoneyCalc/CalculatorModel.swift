@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Numerics
 
 // Standard HP calculator registers
 let stackPrefixValues = ["X", "Y", "Z", "T"]
@@ -413,6 +414,8 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         plus:      BinaryOpAdditive( + ),
         minus:     BinaryOpAdditive( - ),
         times:     BinaryOpMultiplicative( * ),
+        
+        rootx:      UnaryOp( sqrt ),
         
         divide:
             CustomOp { s0 in

@@ -28,9 +28,11 @@ let key0 = 0, key1 = 1, key2 = 2, key3 = 3, key4 = 4, key5 = 5, key6 = 6, key7 =
 
 let plus = 10, minus = 11, times = 12, divide = 13
 
-let dot = 20, enter = 21, clear = 22, equal = 23, back = 24, sign = 25
+let dot = 20, enter = 21, clear = 22, equal = 23, back = 24, sign = 25, eex = 26
 
 let fixL = 30, fixR = 31, roll = 32, xy = 33, percent = 34, lastx = 35, sto = 36, rcl = 37, mPlus = 38, mMinus = 39
+
+let y2x = 40, invx = 41, x2 = 42, rootx = 43, log = 44, ln = 45, ten2x = 46, e2x = 47, pi = 48
 
 let sk0 = 50, sk1 = 51, sk2 = 52, sk3 = 53, sk4 = 54, sk5 = 55, sk6 = 56, sk7 = 57, sk8 = 58, sk9 = 59
 
@@ -59,10 +61,10 @@ struct CalculatorView: View {
     let opPad = PadSpec(
         id: padOp,
         rows: 4, cols: 3,
-        keys: [ Key(divide, "÷"), Key(fixL, ".00\u{2190}", fontSize: 12), Key(sto, image: .yx),
-                Key(times, "×"),  Key(fixR, ".00\u{2192}", fontSize: 12), Key(rcl, image: .onex),
-                Key(minus, "−"),  Key(xy, "X\u{21c6}Y", fontSize: 12),    Key(mPlus, image: .x2),
-                Key(plus,  "+"),  Key(roll, "R\u{2193}", fontSize: 12),   Key(mMinus, image: .rx)
+        keys: [ Key(divide, "÷"), Key(fixL, ".00\u{2190}", fontSize: 12), Key(y2x, image: .yx),
+                Key(times, "×"),  Key(fixR, ".00\u{2192}", fontSize: 12), Key(invx, image: .onex),
+                Key(minus, "−"),  Key(xy, "X\u{21c6}Y", fontSize: 12),    Key(x2, image: .x2),
+                Key(plus,  "+"),  Key(roll, "R\u{2193}", fontSize: 12),   Key(rootx, image: .rx)
               ])
     
     let enterPad = PadSpec(
@@ -84,19 +86,6 @@ struct CalculatorView: View {
         radius: 10, spacing: 10,
         buttonColor: Color("KeyColor"), textColor: Color("KeyText"))
     
-    let cryptoRowSpec = RowSpec (
-        id: rowCrypto,
-        keys: [ SoftKey(sk0, "BTC"),
-                SoftKey(sk1, "ETH"),
-                SoftKey(sk2, "SOL"),
-                SoftKey(sk3, "ADA"),
-                SoftKey(sk4, "DOT"),
-                SoftKey(sk5, "LINK")
-              ],
-        fontSize: 15.0,
-        caption: "Crypto"
-    )
-
     let fiatRowSpec = RowSpec (
         id: rowFiat,
         keys: [ SoftKey(sk0, "USD"),
@@ -107,20 +96,7 @@ struct CalculatorView: View {
                 SoftKey(sk5, "JPY")
               ],
         fontSize: 15.0,
-        caption: "Fiat"
-    )
-
-    let stockRowSpec = RowSpec (
-        id: rowStock,
-        keys: [ SoftKey(sk0, "SU"),
-                SoftKey(sk1, "T"),
-                SoftKey(sk2, "APPL"),
-                SoftKey(sk3, "ENB"),
-                SoftKey(sk4, "BCE"),
-                SoftKey(sk5, "BNS")
-              ],
-        fontSize: 15.0,
-        caption: "Stock"
+        caption: "Currency"
     )
 
     // **************************
@@ -142,16 +118,11 @@ struct CalculatorView: View {
             {
                 MemoryDisplay( model: model, leadingOps: swipeLeadingOpTable )
                 ZStack {
-//                    Rectangle()
-//                        .background(Color("Display"))
-//                        .cornerRadius( 40.0, corners: [.topLeft, .topRight] )
-
                     VStack(alignment: .center) {
                         Display( model: model )
-//                        SoftKeyRow( keySpec: skSpec, rowSpec: cryptoRowSpec, keyPressHandler: model )
-//                            .padding( .vertical, 5 )
                         SoftKeyRow( keySpec: skSpec, rowSpec: fiatRowSpec, keyPressHandler: model )
                             .padding( .vertical, 5 )
+                        
                         VStack( alignment: .leading) {
                             HStack {
                                 Keypad( keySpec: keySpec, padSpec: numPad, keyPressHandler: model )

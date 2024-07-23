@@ -8,6 +8,27 @@
 import Foundation
 import Numerics
 
+
+enum KeyCode: Int {
+    case key0 = 0, key1, key2, key3, key4, key5, key6, key7, key8, key9
+    
+    case plus = 10, minus, times, divide
+    
+    case dot = 20, enter, clear, equal, back, sign, eex
+    
+    case fixL = 30, fixR, roll, xy, percent, lastx, sto, rcl, mPlus, mMinus
+    
+    case y2x = 40, inv, x2, sqrt, log, ln, ten2x, e2x, pi
+    
+    case sk0 = 50, sk1, sk2, sk3, sk4, sk5, sk6, sk7, sk8, sk9
+}
+
+
+enum PadCode: Int {
+    case padDigits = 0, padOp, padEnter, padClear, padFiat
+}
+
+
 // Standard HP calculator registers
 let stackPrefixValues = ["X", "Y", "Z", "T"]
 
@@ -24,7 +45,9 @@ typealias TypeTag = ( class: TypeClass, index: TypeIndex)
 
 typealias TaggedValue = (tag: TypeTag, reg: Double )
 
-let untypedZero: TaggedValue = ((.untyped, 0), 0.0)
+let tagUntyped: TypeTag = (.untyped, 0)
+
+let untypedZero: TaggedValue = (tagUntyped, 0.0)
 
 protocol TypeRecord {
     var suffix: String { get }
@@ -238,7 +261,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     
     var memoryRows: [RowDataItem] { return state.memory }
     
-    private let entryKeys:Set<Int> = [key0, key1, key2, key3, key4, key5, key6, key7, key8, key9, dot, sign, back]
+    private let entryKeys:Set<KeyCode> = [.key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9, .dot, .sign, .back]
     
     private func startTextEntry(_ str: String ) {
         state.entryMode = true
@@ -277,13 +300,13 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         return state.stack[ stkIndex ]
     }
     
-    func memoryOp( key: KeyID, index: Int ) {
+    func memoryOp( key: KeyCode, index: Int ) {
         undoStack.push(state)
         acceptTextEntry()
 
         // Leading edge swipe operations
         switch key {
-        case rcl:
+        case .rcl:
             if !state.noLift {
                 state.stackLift()
             }
@@ -291,17 +314,17 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             state.Xtv = state.memory[index].value
             break
             
-        case sto:
+        case .sto:
             state.memory[index].value = state.Xtv
             break
             
-        case mPlus:
+        case .mPlus:
             if state.Xt == state.memory[index].value.tag {
                 state.memory[index].value.reg += state.X
             }
             break
 
-        case mMinus:
+        case .mMinus:
             if state.Xt == state.memory[index].value.tag {
                 state.memory[index].value.reg -= state.X
             }
@@ -340,6 +363,26 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         func transition(_ s0: CalcState ) -> CalcState? {
             var s1 = s0
             s1.X = function( s0.X )
+            return s1
+        }
+    }
+    
+    class BinaryOpReal: StateOperator {
+        let function: (Double, Double) -> Double
+        
+        init(_ function: @escaping (Double, Double) -> Double ) {
+            self.function = function
+        }
+        
+        func transition(_ s0: CalcState ) -> CalcState? {
+            if s0.Yt.class != .untyped || s0.Xt.class != .untyped {
+                // Cannot use typed values
+                return nil
+            }
+            
+            var s1 = s0
+            s1.stackDrop()
+            s1.X = function( s0.Y, s0.X )
             return s1
         }
     }
@@ -410,14 +453,18 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         }
     }
     
-    let opTable: [KeyID: StateOperator] = [
-        plus:      BinaryOpAdditive( + ),
-        minus:     BinaryOpAdditive( - ),
-        times:     BinaryOpMultiplicative( * ),
+    let opTable: [KeyCode : StateOperator] = [
+        .plus:  BinaryOpAdditive( + ),
+        .minus: BinaryOpAdditive( - ),
+        .times: BinaryOpMultiplicative( * ),
         
-        rootx:      UnaryOp( sqrt ),
+        // Square root, inverse, x squared, y to the x
+        .sqrt:  UnaryOp( sqrt ),
+        .inv:   UnaryOp( { (x: Double) -> Double in return 1.0/x } ),
+        .x2:    UnaryOp( { (x: Double) -> Double in return x*x } ),
+        .y2x:   BinaryOpReal( pow ),
         
-        divide:
+        .divide:
             CustomOp { s0 in
                 var s1 = s0
                 s1.stackDrop()
@@ -444,14 +491,16 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                 return s1
             },
         
-        enter:
+        .enter:
+            // Push stack up, x becomes entry value
             CustomOp { s0 in
                 var s1 = s0
                 s1.stackLift()
                 s1.noLift = true
                 return s1
             },
-        clear:
+        .clear:
+            // Clear X register
             CustomOp { s0 in
                 var s1 = s0
                 s1.Xtv = untypedZero
@@ -459,14 +508,16 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                 return s1
             },
         
-        roll:
+        .roll:
+            // Roll down register stack
             CustomOp { s0 in
                 var s1 = s0
                 s1.stackRoll()
                 return s1
             },
         
-        xy:
+        .xy:
+            // x Y exchange
             CustomOp { s0 in
                 var s1 = s0
                 s1.Ytv = s0.Xtv
@@ -476,15 +527,15 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     ]
     
     func keyPress(_ event: KeyEvent) {
-        let (padID, keyID) = event
+        let (padCode, keyCode) = event
         
         if state.entryMode {
-            if entryKeys.contains(keyID) {
-                if keyID == dot {
+            if entryKeys.contains(keyCode) {
+                if keyCode == .dot {
                     // Decimal is a no-op if one has already been entered
                     if !state.entryText.contains(".") { state.entryText.append(".")}
                 }
-                else if keyID == sign {
+                else if keyCode == .sign {
                     if state.entryText.starts( with: "-") {
                         state.entryText.removeFirst()
                     }
@@ -492,7 +543,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                         state.entryText.insert( "-", at: state.entryText.startIndex )
                     }
                 }
-                else if keyID == back {
+                else if keyCode == .back {
                     state.entryText.removeLast()
                     
                     if state.entryText.isEmpty {
@@ -502,7 +553,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                     }
                 }
                 else {
-                    state.entryText.append( String(keyID))
+                    state.entryText.append( String(keyCode.rawValue))
                 }
                 return
             }
@@ -510,27 +561,22 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             // Fallthrough to switch
         }
         
-        if padID == rowCrypto {
+        if padCode == .padFiat {
             acceptTextEntry()
-            financialKeyPress( (.crypto, keyID - sk0) )
-            return
-        }
-        else if padID == rowFiat {
-            acceptTextEntry()
-            financialKeyPress( (.fiat, keyID - sk0) )
+            financialKeyPress( (.fiat, keyCode.rawValue - KeyCode.sk0.rawValue) )
             return
         }
         
-        switch keyID {
-        case key0, key1, key2, key3, key4, key5, key6, key7, key8, key9:
-            startTextEntry( String(keyID) )
+        switch keyCode {
+        case .key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9:
+            startTextEntry( String(keyCode.rawValue) )
             if !state.noLift {
                 state.stackLift()
             }
             state.noLift = false
             break
             
-        case dot:
+        case .dot:
             startTextEntry( "0." )
             if !state.noLift {
                 state.stackLift()
@@ -538,25 +584,25 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             state.noLift = false
             break
             
-        case back:
+        case .back:
             // Undo last operation by restoring previous state
             if let lastState = undoStack.pop() {
                 state = lastState
             }
             break
             
-        case fixL:
+        case .fixL:
             var trec = getRecord( state.Xt )
             trec.digits = max(0, trec.digits-1 )
             break
             
-        case fixR:
+        case .fixR:
             var trec = getRecord( state.Xt )
             trec.digits = min(15, trec.digits+1 )
             break
             
         default:
-            if let op = opTable[keyID] {
+            if let op = opTable[keyCode] {
                 // Transition to new calculator state based on operation
                 undoStack.push(state)
                 acceptTextEntry()

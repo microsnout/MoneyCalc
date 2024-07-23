@@ -24,22 +24,6 @@ extension View {
     }
 }
 
-let key0 = 0, key1 = 1, key2 = 2, key3 = 3, key4 = 4, key5 = 5, key6 = 6, key7 = 7, key8 = 8, key9 = 9
-
-let plus = 10, minus = 11, times = 12, divide = 13
-
-let dot = 20, enter = 21, clear = 22, equal = 23, back = 24, sign = 25, eex = 26
-
-let fixL = 30, fixR = 31, roll = 32, xy = 33, percent = 34, lastx = 35, sto = 36, rcl = 37, mPlus = 38, mMinus = 39
-
-let y2x = 40, invx = 41, x2 = 42, rootx = 43, log = 44, ln = 45, ten2x = 46, e2x = 47, pi = 48
-
-let sk0 = 50, sk1 = 51, sk2 = 52, sk3 = 53, sk4 = 54, sk5 = 55, sk6 = 56, sk7 = 57, sk8 = 58, sk9 = 59
-
-let padDigits = 0, padOp = 1, padEnter = 2, padClear = 3
-
-let rowCrypto = 10, rowFiat = 11, rowStock = 12
-
 
 struct CalculatorView: View {
     @StateObject  var model = CalculatorModel()
@@ -50,33 +34,33 @@ struct CalculatorView: View {
         buttonColor: Color("KeyColor"), textColor: Color("KeyText"))
     
     let numPad = PadSpec(
-        id: padDigits,
+        pc: .padDigits,
         rows: 4, cols: 3,
-        keys: [ Key(key7, "7"), Key(key8, "8"), Key(key9, "9"),
-                Key(key4, "4"), Key(key5, "5"), Key(key6, "6"),
-                Key(key1, "1"), Key(key2, "2"), Key(key3, "3"),
-                Key(key0, "0"), Key(dot, "."),  Key(sign, "+/-", fontSize: 15)
+        keys: [ Key(.key7, "7"), Key(.key8, "8"), Key(.key9, "9"),
+                Key(.key4, "4"), Key(.key5, "5"), Key(.key6, "6"),
+                Key(.key1, "1"), Key(.key2, "2"), Key(.key3, "3"),
+                Key(.key0, "0"), Key(.dot, "."),  Key(.sign, "+/-", fontSize: 15)
               ])
     
     let opPad = PadSpec(
-        id: padOp,
+        pc: .padOp,
         rows: 4, cols: 3,
-        keys: [ Key(divide, "÷"), Key(fixL, ".00\u{2190}", fontSize: 12), Key(y2x, image: .yx),
-                Key(times, "×"),  Key(fixR, ".00\u{2192}", fontSize: 12), Key(invx, image: .onex),
-                Key(minus, "−"),  Key(xy, "X\u{21c6}Y", fontSize: 12),    Key(x2, image: .x2),
-                Key(plus,  "+"),  Key(roll, "R\u{2193}", fontSize: 12),   Key(rootx, image: .rx)
+        keys: [ Key(.divide, "÷"), Key(.fixL, ".00\u{2190}", fontSize: 12), Key(.y2x, image: .yx),
+                Key(.times, "×"),  Key(.fixR, ".00\u{2192}", fontSize: 12), Key(.inv, image: .onex),
+                Key(.minus, "−"),  Key(.xy, "X\u{21c6}Y", fontSize: 12),    Key(.x2, image: .x2),
+                Key(.plus,  "+"),  Key(.roll, "R\u{2193}", fontSize: 12),   Key(.sqrt, image: .rx)
               ])
     
     let enterPad = PadSpec(
-        id: padEnter,
+        pc: .padEnter,
         rows: 1, cols: 3,
-        keys: [ Key(enter, "Enter", size: 2, fontSize: 15)
+        keys: [ Key(.enter, "Enter", size: 2, fontSize: 15)
               ])
     
     let clearPad = PadSpec(
-        id: padClear,
+        pc: .padClear,
         rows: 1, cols: 3,
-        keys: [ Key(back, "BACK/UNDO", size: 2, fontSize: 12), Key(clear, "CLx", fontSize: 12)
+        keys: [ Key(.back, "BACK/UNDO", size: 2, fontSize: 12), Key(.clear, "CLx", fontSize: 12)
               ])
     
     // **************************
@@ -87,13 +71,13 @@ struct CalculatorView: View {
         buttonColor: Color("KeyColor"), textColor: Color("KeyText"))
     
     let fiatRowSpec = RowSpec (
-        id: rowFiat,
-        keys: [ SoftKey(sk0, "USD"),
-                SoftKey(sk1, "CAD"),
-                SoftKey(sk2, "EUR"),
-                SoftKey(sk3, "GBP"),
-                SoftKey(sk4, "AUD"),
-                SoftKey(sk5, "JPY")
+        pc: .padFiat,
+        keys: [ SoftKey(.sk0, "USD"),
+                SoftKey(.sk1, "CAD"),
+                SoftKey(.sk2, "EUR"),
+                SoftKey(.sk3, "GBP"),
+                SoftKey(.sk4, "AUD"),
+                SoftKey(.sk5, "JPY")
               ],
         fontSize: 15.0,
         caption: "Currency"
@@ -101,11 +85,11 @@ struct CalculatorView: View {
 
     // **************************
     
-    let swipeLeadingOpTable: [(Int, String, Color)] = [
-        ( rcl,    "RCL", .mint ),
-        ( sto,    "STO", .indigo ),
-        ( mPlus,  "M+",  .cyan  ),
-        ( mMinus, "M-",  .green )
+    let swipeLeadingOpTable: [(KeyCode, String, Color)] = [
+        ( .rcl,    "RCL", .mint ),
+        ( .sto,    "STO", .indigo ),
+        ( .mPlus,  "M+",  .cyan  ),
+        ( .mMinus, "M-",  .green )
     ]
 
     var body: some View {
@@ -138,7 +122,6 @@ struct CalculatorView: View {
                     .padding(.vertical, 20)
                     .background( Color("Background"))
                 }
-//                .padding(.horizontal, 0)
             }
         }
     }

@@ -158,7 +158,7 @@ struct MemoryDetailView: View {
 struct MemoryDisplay: View {
     @StateObject var model: CalculatorModel
     
-    let leadingOps: [(key: Int, text: String, color: Color)]
+    let leadingOps: [(key: KeyCode, text: String, color: Color)]
     
     @State private var editMode = EditMode.inactive
 

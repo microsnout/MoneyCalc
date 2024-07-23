@@ -12,7 +12,7 @@ typealias KeyID = Int
 typealias PadID = Int
 typealias RowID = Int
 
-typealias  KeyEvent = ( pad: PadID, key: KeyID )
+typealias  KeyEvent = ( pad: PadCode, key: KeyCode )
 
 protocol KeyPressHandler {
     func keyPress(_ event: KeyEvent )
@@ -28,14 +28,16 @@ struct KeySpec {
 }
 
 struct Key: Identifiable {
-    var id: KeyID
+    var kc: KeyCode
     var size: Int           // Either 1 or 2, single width keys or double width
     var text: String?
     var fontSize:Double?
     var image: Image?
     
-    init(_ id: KeyID, _ label: String? = nil, size: Int = 1, fontSize: Double? = nil, image: ImageResource? = nil ) {
-        self.id = id
+    var id: Int { return self.kc.rawValue }
+
+    init(_ kc: KeyCode, _ label: String? = nil, size: Int = 1, fontSize: Double? = nil, image: ImageResource? = nil ) {
+        self.kc = kc
         self.text = label
         self.size = size
         self.fontSize = fontSize
@@ -50,7 +52,7 @@ struct Key: Identifiable {
 }
 
 struct PadSpec {
-    var id: PadID
+    var pc: PadCode
     var rows: Int
     var cols: Int
     var keys: [Key]
@@ -86,7 +88,7 @@ struct Keypad: View {
         ) {
             ForEach(padSpec.keys) { key in
                 Button( action: {
-                    keyPressHandler.keyPress( (padSpec.id, key.id) )
+                    keyPressHandler.keyPress( (padSpec.pc, key.kc) )
                     impactFeedback.impactOccurred()
                 })
                 {
@@ -132,17 +134,19 @@ struct Keypad: View {
 // ********************************************
 
 struct SoftKey: Identifiable {
-    var id: KeyID
+    var kc: KeyCode
     var ch: String
     
-    init(_ id: KeyID, _ ch: String ) {
-        self.id = id
+    var id: Int { return self.kc.rawValue }
+    
+    init(_ kc: KeyCode, _ ch: String ) {
+        self.kc = kc
         self.ch = ch
     }
 }
 
 struct RowSpec {
-    var id: RowID
+    var pc: PadCode
     var keys: [SoftKey]
     var fontSize: Double
     var caption: String
@@ -159,7 +163,7 @@ struct SoftKeyRow: View {
         HStack {
             ForEach(rowSpec.keys, id: \.id) { key in
                 Button( action: {
-                    keyPressHandler.keyPress( (rowSpec.id, key.id) )
+                    keyPressHandler.keyPress( (rowSpec.pc, key.kc) )
                 })
                 {
                     Spacer()

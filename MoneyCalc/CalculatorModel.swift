@@ -14,7 +14,7 @@ enum KeyCode: Int {
     
     case plus = 10, minus, times, divide
     
-    case dot = 20, enter, clear, equal, back, sign, eex
+    case dot = 20, enter, clear, back, sign, eex
     
     case fixL = 30, fixR, roll, xy, percent, lastx, sto, rcl, mPlus, mMinus
     
@@ -466,6 +466,14 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         .x2:    UnaryOp( { (x: Double) -> Double in return x*x } ),
         .y2x:   BinaryOpReal( pow ),
         
+        // Math function row 0
+        .sin:   UnaryOp( sin ),
+        .cos:   UnaryOp( cos ),
+        .tan:   UnaryOp( tan ),
+        .log:   UnaryOp( log10 ),
+        .ln:    UnaryOp( log ),
+        .pi:    UnaryOp( { (_) -> Double in return Double.pi } ),
+
         .divide:
             CustomOp { s0 in
                 var s1 = s0

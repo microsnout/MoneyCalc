@@ -54,7 +54,7 @@ struct CalculatorView: View {
     let enterPad = PadSpec(
         pc: .padEnter,
         rows: 1, cols: 3,
-        keys: [ Key(.enter, "Enter", size: 2, fontSize: 15)
+        keys: [ Key(.enter, "Enter", size: 2, fontSize: 15), Key(.eex, "EE", fontSize: 15)
               ])
     
     let clearPad = PadSpec(
@@ -90,9 +90,9 @@ struct CalculatorView: View {
                 SoftKey(.tan, "tan"),
                 SoftKey(.log, "log"),
                 SoftKey(.ln,  "ln"),
-                SoftKey(.pi,  "pi")
+                SoftKey(.pi,  "\u{1d70b}")
             ],
-        fontSize: 15.0,
+        fontSize: 18.0,
         caption: "Fn0"
     )
 

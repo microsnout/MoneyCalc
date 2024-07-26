@@ -18,14 +18,16 @@ enum KeyCode: Int {
     
     case fixL = 30, fixR, roll, xy, percent, lastx, sto, rcl, mPlus, mMinus
     
-    case y2x = 40, inv, x2, sqrt, log, ln, ten2x, e2x, pi
+    case y2x = 40, inv, x2, sqrt
     
-    case sk0 = 50, sk1, sk2, sk3, sk4, sk5, sk6, sk7, sk8, sk9
+    case fn0 = 50, sin, cos, tan, log, ln, pi, asin, acos, atan, tenExp, eExp, e
+    
+    case sk0 = 90, sk1, sk2, sk3, sk4, sk5, sk6
 }
 
 
 enum PadCode: Int {
-    case padDigits = 0, padOp, padEnter, padClear, padFiat
+    case padDigits = 0, padOp, padEnter, padClear, padFiat, padFn0
 }
 
 

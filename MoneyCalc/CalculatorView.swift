@@ -82,7 +82,21 @@ struct CalculatorView: View {
         fontSize: 15.0,
         caption: "Currency"
     )
+    
+    let fn0RowSpec = RowSpec (
+        pc: .padFn0,
+        keys: [ SoftKey(.sin, "sin"),
+                SoftKey(.cos, "cos"),
+                SoftKey(.tan, "tan"),
+                SoftKey(.log, "log"),
+                SoftKey(.ln,  "ln"),
+                SoftKey(.pi,  "pi")
+            ],
+        fontSize: 15.0,
+        caption: "Fn0"
+    )
 
+    
     // **************************
     
     let swipeLeadingOpTable: [(KeyCode, String, Color)] = [
@@ -91,6 +105,18 @@ struct CalculatorView: View {
         ( .mPlus,  "M+",  .cyan  ),
         ( .mMinus, "M-",  .green )
     ]
+    
+    @State private var location: CGPoint = CGPoint( x: 0, y: 0)
+    
+    @State private var movement: CGSize = CGSize.zero
+    
+    var dragBoundry: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                self.movement = value.translation
+                print(self.movement)
+            }
+    }
 
     var body: some View {
         ZStack(alignment: .center) {
@@ -103,10 +129,27 @@ struct CalculatorView: View {
                 MemoryDisplay( model: model, leadingOps: swipeLeadingOpTable )
                 ZStack {
                     VStack(alignment: .center) {
+                        // App name and drag handle
+                        HStack {
+                            Text("HP 33").foregroundColor(.black)/*@START_MENU_TOKEN@*/.bold/*@END_MENU_TOKEN@*/().italic()
+                            Spacer()
+                            Image("drag-vertical")
+                                .resizable().scaledToFit().border(.gray)
+                                .gesture( dragBoundry )
+                        }
+                        .frame( height: 25 )
+                        
+                        // Main calculator display
                         Display( model: model )
+                        
                         SoftKeyRow( keySpec: skSpec, rowSpec: fiatRowSpec, keyPressHandler: model )
                             .padding( .vertical, 5 )
+                        SoftKeyRow( keySpec: skSpec, rowSpec: fn0RowSpec, keyPressHandler: model )
+                            .padding( .vertical, 5 )
+
+                        Spacer()
                         
+                        // Standard keypads
                         VStack( alignment: .leading) {
                             HStack {
                                 Keypad( keySpec: keySpec, padSpec: numPad, keyPressHandler: model )
@@ -119,7 +162,7 @@ struct CalculatorView: View {
                         }.alignmentGuide(.leading, computeValue: {_ in 0})
                     }
                     .padding(.horizontal, 30)
-                    .padding(.vertical, 20)
+                    .padding(.vertical, 5)
                     .background( Color("Background"))
                 }
             }

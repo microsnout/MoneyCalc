@@ -183,23 +183,26 @@ struct SoftKeyRow: View {
                 }
              }
         }
-        .padding( .vertical, 12 )
-        .overlay(
-            Rectangle()
-                .stroke( Color("Frame") )
-                .foregroundColor( Color.clear )
-                .overlay(
-                    Text( rowSpec.caption )
-                        .padding( .horizontal, 5 )
-                        .background( Color("Background") )
-                        .foregroundColor( Color("Frame") )
-                        .font(.system(size: 10.0 ))
-                        .alignmentGuide(.leading, computeValue: {_ in -10})
-                        .alignmentGuide(.top, computeValue: {_ in 7})
-                        ,
-                   alignment: .topLeading
-                )
-        )
+        
+//  Rectangle around rows with caption text
+//        .padding( .vertical, 12 )
+//        .overlay(
+//            Rectangle()
+//                .stroke( Color("Frame") )
+//                .foregroundColor( Color.clear )
+//                .overlay(
+//                    Text( rowSpec.caption )
+//                        .padding( .horizontal, 5 )
+//                        .background( Color("Background") )
+//                        .foregroundColor( Color("Frame") )
+//                        .font(.system(size: 10.0 ))
+//                        .alignmentGuide(.leading, computeValue: {_ in -10})
+//                        .alignmentGuide(.top, computeValue: {_ in 7})
+//                        ,
+//                   alignment: .topLeading
+//                )
+//        )
+        
     }
 }
 

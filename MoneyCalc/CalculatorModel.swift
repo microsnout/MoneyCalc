@@ -171,9 +171,18 @@ struct CalcState {
     
     // Data entry state
     var entryMode: Bool = false
-    var entryText: String = ""
+    var decimalSeen: Bool = false
     var exponentEntry: Bool = false
+    var entryText: String = ""
     var exponentText: String = ""
+    
+    mutating func clearEntry() {
+        self.entryMode = false
+        self.decimalSeen = false
+        self.exponentEntry = false
+        self.entryText.removeAll(keepingCapacity: true)
+        self.exponentText.removeAll(keepingCapacity: true)
+    }
 
     var X: Double {
         get { stack[regX].value.reg }
@@ -223,6 +232,10 @@ struct CalcState {
     }
 
     mutating func stackLift(_ by: Int = 1 ) {
+        if self.noLift {
+            self.noLift = false
+            return
+        }
         for rx in stride( from: stackSize-1, to: regX, by: -1 ) {
             self.stack[rx].value.reg = self.stack[rx-1].value.reg
             self.stack[rx].value.tag = self.stack[rx-1].value.tag
@@ -273,13 +286,20 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     private let entryKeys:Set<KeyCode> = [.key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9, .dot, .sign, .back, .eex]
     
     private func startTextEntry(_ str: String ) {
+        state.clearEntry()
         state.entryMode = true
         state.entryText = str
+        state.decimalSeen = str.contains(".")
     }
     
     private func acceptTextEntry() {
         if state.entryMode {
-            state.stack[regX].value.reg = Double(state.entryText)!
+            var num: String = state.entryText
+            if state.exponentEntry {
+                num.removeLast(3)
+            }
+            let str: String = state.exponentEntry ? num + "E" + state.exponentText : num
+            state.stack[regX].value.reg = Double(str)!
             state.stack[regX].value.tag = (.untyped, 0)
             state.entryMode = false
         }
@@ -316,10 +336,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         // Leading edge swipe operations
         switch key {
         case .rcl:
-            if !state.noLift {
-                state.stackLift()
-            }
-            state .noLift = false
+            state.stackLift()
             state.Xtv = state.memory[index].value
             break
             
@@ -543,40 +560,102 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             }
     ]
     
+    
+    func EntryModeKeypress(_ keyCode: KeyCode ) -> Bool {
+        if !entryKeys.contains(keyCode) {
+            return false
+        }
+        
+        if state.exponentEntry {
+            switch keyCode {
+            case .key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9:
+                // Append a digit to exponent
+                if state.exponentText.starts( with: "-") && state.exponentText.count < 4 || state.exponentText.count < 3 {
+                    state.exponentText.append( String(keyCode.rawValue))
+                }
+
+            case .dot, .eex:
+                // No op
+                break
+                
+            case .sign:
+                if state.exponentText.starts( with: "-") {
+                    state.exponentText.removeFirst()
+                }
+                else {
+                    state.exponentText.insert( "-", at: state.exponentText.startIndex )
+                }
+
+            case .back:
+                if state.exponentText.isEmpty {
+                    state.exponentEntry = false
+                    state.entryText.removeLast(3)
+                }
+                else {
+                    state.exponentText.removeLast()
+                }
+                
+            default:
+                // No op
+                break
+
+            }
+        }
+        else {
+            switch keyCode {
+            case .key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9:
+                // Append a digit
+                state.entryText.append( String(keyCode.rawValue))
+                
+            case .dot:
+                if !state.decimalSeen {
+                    state.entryText.append(".")
+                    state.decimalSeen = true
+                }
+                
+            case .eex:
+                if !state.decimalSeen {
+                    state.entryText += ".0"
+                    state.decimalSeen = true
+                }
+                state.entryText += "×10"
+                state.exponentText = ""
+                state.exponentEntry = true
+
+            case .sign:
+                if state.entryText.starts( with: "-") {
+                    state.entryText.removeFirst()
+                }
+                else {
+                    state.entryText.insert( "-", at: state.entryText.startIndex )
+                }
+
+            case .back:
+                if state.entryText.removeLast() == "." {
+                    state.decimalSeen = false
+                }
+                
+                if state.entryText.isEmpty {
+                    // Clear X, exit entry mode, no further actions
+                    state.clearEntry()
+                    state.noLift = true
+                }
+
+            default:
+                // No op
+                break
+            }
+        }
+        
+        return true
+    }
+    
+    
     func keyPress(_ event: KeyEvent) {
         let (padCode, keyCode) = event
         
-        if state.entryMode {
-            if entryKeys.contains(keyCode) {
-                if keyCode == .dot {
-                    // Decimal is a no-op if one has already been entered
-                    if !state.entryText.contains(".") { state.entryText.append(".")}
-                }
-                else if keyCode == .sign {
-                    if state.entryText.starts( with: "-") {
-                        state.entryText.removeFirst()
-                    }
-                    else {
-                        state.entryText.insert( "-", at: state.entryText.startIndex )
-                    }
-                }
-                else if keyCode == .back {
-                    state.entryText.removeLast()
-                    
-                    if state.entryText.isEmpty {
-                        // Clear X, exit entry mode, no further actions
-                        state.noLift = true
-                        state.entryMode = false
-                    }
-                }
-                else {
-                    // Append a digit
-                    state.entryText.append( String(keyCode.rawValue))
-                }
-                return
-            }
-                
-            // Fallthrough to switch
+        if state.entryMode && EntryModeKeypress(keyCode) {
+            return
         }
         
         if padCode == .padFiat {
@@ -588,18 +667,12 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         switch keyCode {
         case .key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9:
             startTextEntry( String(keyCode.rawValue) )
-            if !state.noLift {
-                state.stackLift()
-            }
-            state.noLift = false
+            state.stackLift()
             break
             
         case .dot:
             startTextEntry( "0." )
-            if !state.noLift {
-                state.stackLift()
-            }
-            state.noLift = false
+            state.stackLift()
             break
             
         case .back:

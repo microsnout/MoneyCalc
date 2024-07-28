@@ -54,11 +54,13 @@ let untypedZero: TaggedValue = (tagUntyped, 0.0)
 protocol TypeRecord {
     var suffix: String { get }
     var digits: Int { get set }
+    var minDigits: Int { get set }
 }
 
 class TypeUntyped: TypeRecord {
     var suffix: String { "" }
     var digits: Int = 4
+    var minDigits: Int = 1
     
     private init() {}
     
@@ -68,6 +70,7 @@ class TypeUntyped: TypeRecord {
 class TypePercentage: TypeRecord {
     var suffix: String { "%" }
     var digits: Int = 2
+    var minDigits: Int = 1
 
     private init() {}
 
@@ -106,7 +109,7 @@ struct NamedValue: RowDataItem {
     
     var register: String {
         let tr = getRecord( value.tag )
-        return value.reg.displayFormat( tr.digits )
+        return value.reg.displayFormat( tr.digits, tr.minDigits )
     }
     
     var suffix: String {
@@ -165,8 +168,12 @@ struct CalcState {
     var lastX: TaggedValue = untypedZero
     var noLift: Bool = false
     var memory = [NamedValue]()
-    var entryMode: Bool   = false
+    
+    // Data entry state
+    var entryMode: Bool = false
     var entryText: String = ""
+    var exponentEntry: Bool = false
+    var exponentText: String = ""
 
     var X: Double {
         get { stack[regX].value.reg }
@@ -263,7 +270,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     
     var memoryRows: [RowDataItem] { return state.memory }
     
-    private let entryKeys:Set<KeyCode> = [.key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9, .dot, .sign, .back]
+    private let entryKeys:Set<KeyCode> = [.key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9, .dot, .sign, .back, .eex]
     
     private func startTextEntry(_ str: String ) {
         state.entryMode = true
@@ -563,6 +570,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                     }
                 }
                 else {
+                    // Append a digit
                     state.entryText.append( String(keyCode.rawValue))
                 }
                 return
@@ -640,10 +648,10 @@ extension Double {
         return nf.string(from: NSNumber(value: self)) ?? ""
     }
 
-    func displayFormat(_ digits: Int ) -> String {
+    func displayFormat(_ digits: Int, _ minDigits: Int ) -> String {
         let nf = NumberFormatter()
         nf.numberStyle = .decimal
-        nf.minimumFractionDigits = digits
+        nf.minimumFractionDigits = minDigits
         nf.maximumFractionDigits = digits
         return nf.string(from: NSNumber(value: self)) ?? ""
     }

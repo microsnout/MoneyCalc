@@ -144,10 +144,11 @@ struct CalculatorView: View {
                         
                         SoftKeyRow( keySpec: skSpec, rowSpec: fiatRowSpec, keyPressHandler: model )
                             .padding( .vertical, 5 )
+                        
                         SoftKeyRow( keySpec: skSpec, rowSpec: fn0RowSpec, keyPressHandler: model )
                             .padding( .vertical, 5 )
 
-                        Spacer()
+                        Divider()
                         
                         // Standard keypads
                         VStack( alignment: .leading) {

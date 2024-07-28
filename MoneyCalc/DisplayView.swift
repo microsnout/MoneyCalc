@@ -95,6 +95,7 @@ struct TypedRegister: View {
                 MonoText(row.register, charWidth: spec.monoSpace, font: spec.registerFont)
                 Text(row.suffix).font(spec.suffixFont).bold().foregroundColor(Color.gray)
             }
+            .frame( height: 30 )
         }
         else {
             EmptyView()
@@ -105,7 +106,7 @@ struct TypedRegister: View {
 struct Display: View {
     @StateObject var model: CalculatorModel
 
-    let rowHeight:Double = 25.0
+    let rowHeight:Double = 35.0
     
     var body: some View {
         ZStack(alignment: .leading) {

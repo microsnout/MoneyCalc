@@ -11,7 +11,9 @@ class TypeFinancial: TypeRecord {
     
     let suffix: String
     var usd: Double
-    var digits: Int
+    var digits: Int    
+    var minDigits: Int = 2
+
     
     init(_ suffix: String, usd: Double, digits: Int ) {
         self.suffix = suffix

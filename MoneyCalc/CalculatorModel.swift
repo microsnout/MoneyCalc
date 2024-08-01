@@ -45,20 +45,31 @@ typealias TypeIndex = Int
 
 typealias TypeTag = ( class: TypeClass, index: TypeIndex)
 
+//struct TypeTag: Hashable {
+//    var class: TypeClass
+//    var index: TypeIndex
+//}
+
 typealias TaggedValue = (tag: TypeTag, reg: Double )
 
 let tagUntyped: TypeTag = (.untyped, 0)
 
 let untypedZero: TaggedValue = (tagUntyped, 0.0)
 
+enum FormatMode: Int {
+    case varMode = 0, fixMode, sciMode, engMode
+}
+
 protocol TypeRecord {
     var suffix: String { get }
+    var mode: FormatMode { get set }
     var digits: Int { get set }
     var minDigits: Int { get set }
 }
 
 class TypeUntyped: TypeRecord {
     var suffix: String { "" }
+    var mode: FormatMode = .varMode
     var digits: Int = 4
     var minDigits: Int = 1
     
@@ -69,6 +80,7 @@ class TypeUntyped: TypeRecord {
 
 class TypePercentage: TypeRecord {
     var suffix: String { "%" }
+    var mode: FormatMode = .varMode
     var digits: Int = 2
     var minDigits: Int = 1
 
@@ -110,6 +122,10 @@ struct NamedValue: RowDataItem {
     var register: String {
         let tr = getRecord( value.tag )
         return value.reg.displayFormat( tr.digits, tr.minDigits )
+    }
+    
+    var exponent: String? {
+        return nil
     }
     
     var suffix: String {
@@ -168,6 +184,7 @@ struct CalcState {
     var lastX: TaggedValue = untypedZero
     var noLift: Bool = false
     var memory = [NamedValue]()
+//    var formatMap: [ TypeClass : TypeRecord ] = [:]
     
     // Data entry state
     var entryMode: Bool = false
@@ -298,7 +315,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             if state.exponentEntry {
                 num.removeLast(3)
             }
-            let str: String = state.exponentEntry ? num + "E" + state.exponentText : num
+            let str: String = state.exponentEntry && !state.exponentText.isEmpty ? num + "E" + state.exponentText : num
             state.stack[regX].value.reg = Double(str)!
             state.stack[regX].value.tag = (.untyped, 0)
             state.entryMode = false
@@ -322,9 +339,16 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             struct EntryRow: RowDataItem {
                 var prefix: String?
                 var register: String
+                var exponent: String?
                 var suffix: String = ""
             }
-            return EntryRow( prefix: state.stack[regX].prefix, register: "\(state.entryText)_")
+            
+            if state.exponentEntry {
+                return EntryRow( prefix: state.stack[regX].prefix, register: state.entryText, exponent: "\(state.exponentText)_")
+            }
+            else {
+                return EntryRow( prefix: state.stack[regX].prefix, register: "\(state.entryText)_")
+            }
         }
         return state.stack[ stkIndex ]
     }

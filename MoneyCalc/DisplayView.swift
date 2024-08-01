@@ -35,15 +35,17 @@ struct MonoText: View {
     let content: String
     let charWidth: CGFloat
     let font: Font
+    let alignment: VerticalAlignment
 
-    init(_ content: String, charWidth: CGFloat, font: Font = .body ) {
+    init(_ content: String, charWidth: CGFloat, font: Font = .body, align: VerticalAlignment = .center ) {
         self.content = content
         self.charWidth = charWidth
         self.font = font
+        self.alignment = align
     }
 
     var body: some View {
-        HStack(spacing: 0) {
+        HStack( alignment: self.alignment, spacing: 0 ) {
             ForEach(0..<self.content.count, id: \.self) { index in
                 Text("\(self.content[self.content.index(self.content.startIndex, offsetBy: index)].description)")
                     .font(font)
@@ -68,16 +70,19 @@ let textSpecTable: [TextSize: TextSpec] = [
 protocol RowDataItem {
     var prefix:   String? { get }
     var register: String  { get }
+    var exponent: String? { get }
     var suffix:   String  { get }
 }
 
 struct NoPrefix: RowDataItem {
     let prefix: String? = ""
     let register: String
+    let exponent: String?
     let suffix: String
     
     init(_ row: RowDataItem ) {
         self.register = row.register
+        self.exponent = row.exponent
         self.suffix = row.suffix
     }
 }
@@ -88,14 +93,19 @@ struct TypedRegister: View {
     
     var body: some View {
         if let spec = textSpecTable[size] {
-            HStack {
+            HStack( alignment: .bottom, spacing: 0 ) {
                 if let prefix = row.prefix {
-                    Text(prefix).font(spec.prefixFont).bold().foregroundColor(Color("Frame"))
+                    Text(prefix).font(spec.prefixFont).bold().foregroundColor(Color("Frame")).padding(.trailing, 10)
                 }
                 MonoText(row.register, charWidth: spec.monoSpace, font: spec.registerFont)
-                Text(row.suffix).font(spec.suffixFont).bold().foregroundColor(Color.gray)
+                
+                if let exp: String = row.exponent {
+                    MonoText(exp, charWidth: spec.monoSpace, font: spec.suffixFont, align: .bottom).alignmentGuide(.bottom, computeValue: { d in 25 })
+                }
+                
+                Text(row.suffix).font(spec.suffixFont).bold().foregroundColor(Color.gray).padding(.leading, 10)
             }
-            .frame( height: 30 )
+            .frame( height: 20 )
         }
         else {
             EmptyView()
@@ -112,7 +122,6 @@ struct Display: View {
         ZStack(alignment: .leading) {
             Rectangle()
                 .fill(Color("Display"))
-                .frame(height: rowHeight*Double(model.rowCount) + 15.0)
             VStack( alignment: .leading, spacing: 5) {
                 ForEach (0..<model.rowCount, id: \.self) { index in
                     TypedRegister( row: model.getRow(index: index), size: .large ).padding(.leading, 10)

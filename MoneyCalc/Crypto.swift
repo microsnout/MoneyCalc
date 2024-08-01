@@ -10,6 +10,7 @@ import Foundation
 class TypeFinancial: TypeRecord {
     
     let suffix: String
+    var mode: FormatMode = .fixMode
     var usd: Double
     var digits: Int    
     var minDigits: Int = 2

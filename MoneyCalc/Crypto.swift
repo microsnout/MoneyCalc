@@ -9,7 +9,7 @@ import Foundation
 
 class TypeFinancial: TypeRecord {
     
-    let suffix: String
+    let suffix: String?
     var mode: FormatMode = .fixMode
     var usd: Double
     var digits: Int    

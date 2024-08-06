@@ -71,14 +71,14 @@ protocol RowDataItem {
     var prefix:   String? { get }
     var register: String  { get }
     var exponent: String? { get }
-    var suffix:   String  { get }
+    var suffix:   String? { get }
 }
 
 struct NoPrefix: RowDataItem {
     let prefix: String? = ""
     let register: String
     let exponent: String?
-    let suffix: String
+    let suffix: String?
     
     init(_ row: RowDataItem ) {
         self.register = row.register
@@ -97,13 +97,16 @@ struct TypedRegister: View {
                 if let prefix = row.prefix {
                     Text(prefix).font(spec.prefixFont).bold().foregroundColor(Color("Frame")).padding(.trailing, 10)
                 }
+                
                 MonoText(row.register, charWidth: spec.monoSpace, font: spec.registerFont)
                 
                 if let exp: String = row.exponent {
                     MonoText(exp, charWidth: spec.monoSpace, font: spec.suffixFont, align: .bottom).alignmentGuide(.bottom, computeValue: { d in 25 })
                 }
                 
-                Text(row.suffix).font(spec.suffixFont).bold().foregroundColor(Color.gray).padding(.leading, 10)
+                if let suffix = row.suffix {
+                    Text(suffix).font(spec.suffixFont).bold().foregroundColor(Color.gray).padding(.leading, 10)
+                }
             }
             .frame( height: 20 )
         }

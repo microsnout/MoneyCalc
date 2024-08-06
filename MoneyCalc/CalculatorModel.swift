@@ -66,14 +66,14 @@ enum FormatMode: Int {
 }
 
 protocol TypeRecord {
-    var suffix: String { get }
+    var suffix: String? { get }
     var mode: FormatMode { get set }
     var digits: Int { get set }
     var minDigits: Int { get set }
 }
 
 class TypeUntyped: TypeRecord {
-    var suffix: String { "" }
+    var suffix: String? = nil
     var mode: FormatMode = .varMode
     var digits: Int = 4
     var minDigits: Int = 1
@@ -82,7 +82,7 @@ class TypeUntyped: TypeRecord {
 }
 
 class TypePercentage: TypeRecord {
-    var suffix: String { "%" }
+    var suffix: String? { "%" }
     var mode: FormatMode = .varMode
     var digits: Int = 2
     var minDigits: Int = 1
@@ -129,7 +129,7 @@ struct NamedValue: RowDataItem {
         return nil
     }
     
-    var suffix: String {
+    var suffix: String? {
         let tr = getRecord( value.tag )
         return tr.suffix
     }
@@ -341,7 +341,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                 var prefix: String?
                 var register: String
                 var exponent: String?
-                var suffix: String = ""
+                var suffix: String? = nil
             }
             
             if state.exponentEntry {

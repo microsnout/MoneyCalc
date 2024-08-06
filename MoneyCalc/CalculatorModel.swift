@@ -37,22 +37,27 @@ let stackPrefixValues = ["X", "Y", "Z", "T"]
 // Register index values
 let regX = 0, regY = 1, regZ = 2, regT = 3, stackSize = 4
 
-enum TypeClass: Int {
+enum TypeCode: Int {
     case untyped = 0, percentage, fiat, crypto, shares, time, compound
 }
 
 typealias TypeIndex = Int
 
-typealias TypeTag = ( class: TypeClass, index: TypeIndex)
+//typealias TypeTag = ( code: TypeCode, index: TypeIndex)
 
-//struct TypeTag: Hashable {
-//    var class: TypeClass
-//    var index: TypeIndex
-//}
+struct TypeTag: Hashable {
+    var code: TypeCode
+    var index: TypeIndex
+    
+    init( _ code: TypeCode, _ index: TypeIndex ) {
+        self.code = code
+        self.index = index
+    }
+}
 
 typealias TaggedValue = (tag: TypeTag, reg: Double )
 
-let tagUntyped: TypeTag = (.untyped, 0)
+let tagUntyped: TypeTag = TypeTag(.untyped, 0)
 
 let untypedZero: TaggedValue = (tagUntyped, 0.0)
 
@@ -73,8 +78,6 @@ class TypeUntyped: TypeRecord {
     var digits: Int = 4
     var minDigits: Int = 1
     
-    private init() {}
-    
     static let record = TypeUntyped()
 }
 
@@ -84,14 +87,12 @@ class TypePercentage: TypeRecord {
     var digits: Int = 2
     var minDigits: Int = 1
 
-    private init() {}
-
     static let record = TypePercentage()
 }
 
 func getRecord(_ tag: TypeTag ) -> TypeRecord {
     
-    switch tag.class {
+    switch tag.code {
     case .percentage:
         return TypePercentage.record
         
@@ -135,9 +136,9 @@ struct NamedValue: RowDataItem {
 }
 
 extension MemoryItem {
-    var typeClass: TypeClass {
+    var typeClass: TypeCode {
         get {
-            return TypeClass( rawValue: self.tagClass )!
+            return TypeCode( rawValue: self.tagClass )!
         }
         
         set {
@@ -147,11 +148,11 @@ extension MemoryItem {
     
     var tag: TypeTag {
         get {
-            return (self.typeClass, TypeIndex(self.tagIndex) )
+            return TypeTag(self.typeClass, TypeIndex(self.tagIndex) )
         }
         
         set {
-            self.tagClass = newValue.class.rawValue
+            self.tagClass = newValue.code.rawValue
             self.tagIndex = newValue.index
         }
     }
@@ -184,7 +185,7 @@ struct CalcState {
     var lastX: TaggedValue = untypedZero
     var noLift: Bool = false
     var memory = [NamedValue]()
-//    var formatMap: [ TypeClass : TypeRecord ] = [:]
+    var formatMap: [ TypeTag : TypeRecord ] = [:]
     
     // Data entry state
     var entryMode: Bool = false
@@ -317,7 +318,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             }
             let str: String = state.exponentEntry && !state.exponentText.isEmpty ? num + "E" + state.exponentText : num
             state.stack[regX].value.reg = Double(str)!
-            state.stack[regX].value.tag = (.untyped, 0)
+            state.stack[regX].value.tag = TypeTag(.untyped, 0)
             state.entryMode = false
         }
     }
@@ -425,7 +426,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         }
         
         func transition(_ s0: CalcState ) -> CalcState? {
-            if s0.Yt.class != .untyped || s0.Xt.class != .untyped {
+            if s0.Yt.code != .untyped || s0.Xt.code != .untyped {
                 // Cannot use typed values
                 return nil
             }
@@ -445,7 +446,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         }
         
         func transition(_ s0: CalcState ) -> CalcState? {
-            if s0.Yt.class == .untyped && s0.Xt.class != .untyped {
+            if s0.Yt.code == .untyped && s0.Xt.code != .untyped {
                 // Cannot convert X operand back to untyped
                 return nil
             }
@@ -479,7 +480,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         }
         
         func transition(_ s0: CalcState ) -> CalcState? {
-            guard s0.Xt.class == .untyped else {
+            guard s0.Xt.code == .untyped else {
                 // X operand must be an untyped value
                 return nil
             }
@@ -530,9 +531,9 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                 if s0.Yt == s0.Xt {
                     // Identical types produces untyped result
                     s1.X = s0.Y / s0.X
-                    s1.Xt = (.untyped, 0)
+                    s1.Xt = TypeTag(.untyped, 0)
                 }
-                else if s0.Xt.class == .untyped {
+                else if s0.Xt.code == .untyped {
                     s1.X = s0.Y / s0.X
                     s1.Xt = s0.Yt
                 }
@@ -541,7 +542,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                     let yType = TypeFinancial.getRecord( s0.Yt ) {
                         // Convert X value to type Y
                         s1.X = s0.Y / (s0.X * xType.usd / yType.usd)
-                        s1.Xt = (.untyped, 0)
+                        s1.Xt = TypeTag(.untyped, 0)
                 }
                 else {
                     return nil
@@ -684,7 +685,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         
         if padCode == .padFiat {
             acceptTextEntry()
-            financialKeyPress( (.fiat, keyCode.rawValue - KeyCode.sk0.rawValue) )
+            financialKeyPress( TypeTag(.fiat, keyCode.rawValue - KeyCode.sk0.rawValue) )
             return
         }
         

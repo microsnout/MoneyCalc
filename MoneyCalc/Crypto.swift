@@ -24,7 +24,7 @@ class TypeFinancial: TypeRecord {
 
     static func getRecord(_ tag: TypeTag ) -> TypeFinancial? {
         
-        switch tag.class {
+        switch tag.code {
         case .crypto:
             return TypeCrypto.getRecord( tag.index )
             
@@ -93,7 +93,7 @@ extension CalculatorModel {
 
         if let s1Type = TypeFinancial.getRecord(s1Tag) {
         
-            if state.Xt.class == .untyped {
+            if state.Xt.code == .untyped {
                 // Value doesn't change, set new tag
                 undoStack.push(state)
                 state.Xt = s1Tag

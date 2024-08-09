@@ -68,14 +68,14 @@ enum FormatMode: Int {
 protocol TypeRecord {
     var suffix: String? { get }
     var mode: FormatMode { get set }
-    var digits: Int { get set }
+    var maxDigits: Int { get set }
     var minDigits: Int { get set }
 }
 
 class TypeUntyped: TypeRecord {
     var suffix: String? = nil
     var mode: FormatMode = .varMode
-    var digits: Int = 4
+    var maxDigits: Int = 4
     var minDigits: Int = 1
     
     static let record = TypeUntyped()
@@ -84,7 +84,7 @@ class TypeUntyped: TypeRecord {
 class TypePercentage: TypeRecord {
     var suffix: String? { "%" }
     var mode: FormatMode = .varMode
-    var digits: Int = 2
+    var maxDigits: Int = 2
     var minDigits: Int = 1
 
     static let record = TypePercentage()
@@ -122,7 +122,7 @@ struct NamedValue: RowDataItem {
     
     var register: String {
         let tr = getRecord( value.tag )
-        return value.reg.displayFormat( tr.digits, tr.minDigits )
+        return value.reg.displayFormat( tr.maxDigits, tr.minDigits )
     }
     
     var exponent: String? {
@@ -709,12 +709,12 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             
         case .fixL:
             var trec = getRecord( state.Xt )
-            trec.digits = max(0, trec.digits-1 )
+            trec.maxDigits = max(0, trec.maxDigits-1 )
             break
             
         case .fixR:
             var trec = getRecord( state.Xt )
-            trec.digits = min(15, trec.digits+1 )
+            trec.maxDigits = min(15, trec.maxDigits+1 )
             break
             
         default:

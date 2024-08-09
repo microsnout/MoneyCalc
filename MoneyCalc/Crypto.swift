@@ -12,14 +12,14 @@ class TypeFinancial: TypeRecord {
     let suffix: String?
     var mode: FormatMode = .fixMode
     var usd: Double
-    var digits: Int    
+    var maxDigits: Int    
     var minDigits: Int = 2
 
     
     init(_ suffix: String, usd: Double, digits: Int ) {
         self.suffix = suffix
         self.usd = usd
-        self.digits = digits
+        self.maxDigits = digits
     }
 
     static func getRecord(_ tag: TypeTag ) -> TypeFinancial? {

@@ -166,6 +166,9 @@ struct SoftKeyRow: View {
                     keyPressHandler.keyPress( (rowSpec.pc, key.kc) )
                 })
                 {
+                    let labelList = key.ch.split(separator: "|")
+                    let label = labelList[0]
+                    
                     Spacer()
                     Rectangle()
                         .foregroundColor(keySpec.buttonColor)
@@ -174,7 +177,7 @@ struct SoftKeyRow: View {
                                alignment: .center)
                         .cornerRadius(keySpec.radius)
                         .overlay(
-                            Text("\(key.ch)")
+                            Text("\(label)")
                                 .font(.system(size: rowSpec.fontSize ))
                                 .background( keySpec.buttonColor)
                                 .foregroundColor( keySpec.textColor),

@@ -75,7 +75,7 @@ protocol RowDataItem {
 }
 
 struct NoPrefix: RowDataItem {
-    let prefix: String? = ""
+    let prefix: String? = nil
     let register: String
     let exponent: String?
     let suffix: String?
@@ -122,6 +122,8 @@ struct Display: View {
     let rowHeight:Double = 35.0
     
     var body: some View {
+        let _ = Self._printChanges()
+        
         ZStack(alignment: .leading) {
             Rectangle()
                 .fill(Color("Display"))
@@ -187,7 +189,9 @@ struct MemoryDisplay: View {
     
     var body: some View {
         NavigationView {
-            if model.memoryRows.isEmpty {
+            let rows = model.state.memoryList
+            
+            if rows.isEmpty {
                 Text("Memory List\n(Press + to store X register)")
                     .navigationBarTitle( "", displayMode: .inline )
                     .navigationBarHidden(false)
@@ -196,7 +200,7 @@ struct MemoryDisplay: View {
             }
             else {
                 List {
-                    ForEach ( Array( model.memoryRows.enumerated()), id: \.offset ) { index, item in
+                    ForEach ( Array( rows.enumerated()), id: \.offset ) { index, item in
                         VStack( alignment: .leading ) {
                             NavigationLink {
                                 MemoryDetailView(  model: model , index: index, item: item )

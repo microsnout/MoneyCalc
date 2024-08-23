@@ -7,6 +7,9 @@
 
 import Foundation
 import Numerics
+import OSLog
+
+let logM = Logger(subsystem: "com.microsnout.calculator", category: "main")
 
 
 enum KeyCode: Int {
@@ -21,6 +24,8 @@ enum KeyCode: Int {
     case y2x = 40, inv, x2, sqrt
     
     case fn0 = 50, sin, cos, tan, log, ln, pi, asin, acos, atan, tenExp, eExp, e
+    
+    case fix = 70, sci, eng
     
     case sk0 = 90, sk1, sk2, sk3, sk4, sk5, sk6
 }
@@ -43,8 +48,6 @@ enum TypeCode: Int {
 
 typealias TypeIndex = Int
 
-//typealias TypeTag = ( code: TypeCode, index: TypeIndex)
-
 struct TypeTag: Hashable {
     var code: TypeCode
     var index: TypeIndex
@@ -62,76 +65,30 @@ let tagUntyped: TypeTag = TypeTag(.untyped, 0)
 let untypedZero: TaggedValue = (tagUntyped, 0.0)
 
 enum FormatMode: Int {
-    case varMode = 0, fixMode, sciMode, engMode
+    case variable = 0, fixed, scientific
 }
 
-protocol TypeRecord {
-    var suffix: String? { get }
-    var mode: FormatMode { get set }
-    var maxDigits: Int { get set }
-    var minDigits: Int { get set }
-}
-
-class TypeUntyped: TypeRecord {
-    var suffix: String? = nil
-    var mode: FormatMode = .varMode
-    var maxDigits: Int = 4
-    var minDigits: Int = 1
+struct FormatRecord {
+    var suffix: String?
+    var mode: FormatMode
+    var maxDigits: Int
+    var minDigits: Int
     
-    static let record = TypeUntyped()
-}
-
-class TypePercentage: TypeRecord {
-    var suffix: String? { "%" }
-    var mode: FormatMode = .varMode
-    var maxDigits: Int = 2
-    var minDigits: Int = 1
-
-    static let record = TypePercentage()
-}
-
-func getRecord(_ tag: TypeTag ) -> TypeRecord {
-    
-    switch tag.code {
-    case .percentage:
-        return TypePercentage.record
-        
-    case .crypto, .fiat:
-        if let rec = TypeFinancial.getRecord(tag) {
-            return rec
-        }
-        return TypeUntyped.record
-
-    default:
-        return TypeUntyped.record
+    init( suffix: String? = nil, mode: FormatMode = .variable, maxDigits: Int = 4, minDigits: Int = 1 ) {
+        self.suffix = suffix
+        self.mode = mode
+        self.maxDigits = maxDigits
+        self.minDigits = minDigits
     }
 }
 
-struct NamedValue: RowDataItem {
+struct NamedValue {
     var name: String?
     var value: TaggedValue
     
     init(_ name: String? = nil, value: TaggedValue ) {
         self.name = name
         self.value = value
-    }
-    
-    var prefix: String? {
-        return name
-    }
-    
-    var register: String {
-        let tr = getRecord( value.tag )
-        return value.reg.displayFormat( tr.maxDigits, tr.minDigits )
-    }
-    
-    var exponent: String? {
-        return nil
-    }
-    
-    var suffix: String? {
-        let tr = getRecord( value.tag )
-        return tr.suffix
     }
 }
 
@@ -180,12 +137,20 @@ extension MemoryItem {
     }
 }
 
+struct RegisterRow: RowDataItem {
+    var prefix: String?
+    var register: String
+    var exponent: String?
+    var suffix: String?
+}
+
 struct CalcState {
     var stack: [NamedValue] = stackPrefixValues.map { NamedValue( $0, value: untypedZero) }
     var lastX: TaggedValue = untypedZero
     var noLift: Bool = false
     var memory = [NamedValue]()
-    var formatMap: [ TypeTag : TypeRecord ] = [:]
+    var formatMap: [ TypeTag : FormatRecord ] = [:]
+    var defaultFormat: FormatRecord = FormatRecord( mode: .variable, maxDigits: 4, minDigits: 1 )
     
     // Data entry state
     var entryMode: Bool = false
@@ -194,12 +159,94 @@ struct CalcState {
     var entryText: String = ""
     var exponentText: String = ""
     
+    private func regRow( _ nv: NamedValue ) -> RegisterRow {
+        return RegisterRow(
+            prefix: nv.name,
+            register: "\(nv.value.reg)" )
+//            register: nv.value.reg.displayFormat(4, 1) )
+    }
+    
+    func stackRow( _ index: Int ) -> RegisterRow {
+        if self.entryMode && index == regX {
+            return RegisterRow(
+                prefix: self.stack[regX].name,
+                register: self.entryText,
+                exponent: self.exponentEntry ? self.exponentText : nil )
+        }
+        
+        return regRow( self.stack[index] )
+    }
+    
+    func memoryRow( _ index: Int ) -> RegisterRow {
+        guard index >= 0 && index < self.memory.count else {
+            return RegisterRow( register: "Error" )
+        }
+        
+        return regRow( self.memory[index] )
+    }
+    
+    var memoryList: [RegisterRow] {
+        get {
+            (0 ..< self.memory.count).map { self.memoryRow($0) }
+        }
+    }
+    
+    func getFormat( tag: TypeTag ) -> FormatRecord {
+        if let rec = formatMap[tag] {
+           return rec
+        }
+        return defaultFormat
+    }
+    
     mutating func clearEntry() {
         self.entryMode = false
         self.decimalSeen = false
         self.exponentEntry = false
         self.entryText.removeAll(keepingCapacity: true)
         self.exponentText.removeAll(keepingCapacity: true)
+        
+        logM.debug( "ClearEntry" )
+    }
+
+    mutating func startTextEntry(_ str: String ) {
+        self.clearEntry()
+        self.entryMode = true
+        self.entryText = str
+        self.decimalSeen = str.contains(".")
+        
+        logM.debug("StartTextEntry: \(str)")
+    }
+    
+    mutating func acceptTextEntry() {
+        if self.entryMode {
+            var num: String = self.entryText
+            
+            logM.debug( "AcceptTextEntry: \(num)")
+            
+            if self.exponentEntry {
+                num.removeLast(3)
+            }
+            
+            let str: String = self.exponentEntry && !self.exponentText.isEmpty ? num + "E" + self.exponentText : num
+            
+            self.stack[regX].value.reg = Double(str)!
+            self.stack[regX].value.tag = TypeTag(.untyped, 0)
+            self.clearEntry()
+        }
+    }
+    
+    mutating func appendTextEntry(_ str: String ) {
+        self.entryText += str
+        
+        let txt = self.entryText
+        logM.debug( "AppendTextEntry: '\(str)' -> '\(txt)'")
+    }
+    
+    mutating func appendExponentEntry(_ str: String ) {
+        self.exponentText += str
+        
+        let txt = self.exponentText
+        logM.debug( "AppendExponentEntry: '\(str)' -> '\(txt)'")
     }
 
     var X: Double {
@@ -299,34 +346,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     static let displayRows = 3
     var rowCount: Int { return CalculatorModel.displayRows }
     
-    var memoryRows: [RowDataItem] { return state.memory }
-    
     private let entryKeys:Set<KeyCode> = [.key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9, .dot, .sign, .back, .eex]
-    
-    private func startTextEntry(_ str: String ) {
-        state.clearEntry()
-        state.entryMode = true
-        state.entryText = str
-        state.decimalSeen = str.contains(".")
-    }
-    
-    private func acceptTextEntry() {
-        if state.entryMode {
-            var num: String = state.entryText
-            if state.exponentEntry {
-                num.removeLast(3)
-            }
-            let str: String = state.exponentEntry && !state.exponentText.isEmpty ? num + "E" + state.exponentText : num
-            state.stack[regX].value.reg = Double(str)!
-            state.stack[regX].value.tag = TypeTag(.untyped, 0)
-            state.entryMode = false
-        }
-    }
-    
-    private func cancelTextEntry() {
-        state.entryMode = false
-        state.entryText = ""
-    }
     
     private func bufferIndex(_ stackIndex: Int ) -> Int {
         // Convert a bottom up index into the stack array to a top down index into the displayed registers
@@ -336,27 +356,12 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     func getRow( index: Int ) -> RowDataItem {
         let stkIndex = bufferIndex(index)
         
-        if state.entryMode && stkIndex == regX {
-            struct EntryRow: RowDataItem {
-                var prefix: String?
-                var register: String
-                var exponent: String?
-                var suffix: String? = nil
-            }
-            
-            if state.exponentEntry {
-                return EntryRow( prefix: state.stack[regX].prefix, register: state.entryText, exponent: "\(state.exponentText)_")
-            }
-            else {
-                return EntryRow( prefix: state.stack[regX].prefix, register: "\(state.entryText)_")
-            }
-        }
-        return state.stack[ stkIndex ]
+        return state.stackRow(stkIndex)
     }
     
     func memoryOp( key: KeyCode, index: Int ) {
         undoStack.push(state)
-        acceptTextEntry()
+        state.acceptTextEntry()
 
         // Leading edge swipe operations
         switch key {
@@ -387,19 +392,19 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     }
     
     func addMemoryItem() {
-        acceptTextEntry()
+        state.acceptTextEntry()
         undoStack.push(state)
         state.memory.append( NamedValue( value: state.Xtv) )
     }
     
     func delMemoryItems( set: IndexSet) {
-        cancelTextEntry()
+        state.clearEntry()
         undoStack.push(state)
         state.memory.remove( atOffsets: set )
     }
     
     func renameMemoryItem( index: Int, newName: String ) {
-        cancelTextEntry()
+        state.clearEntry()
         undoStack.push(state)
         state.memory[index].name = newName
     }
@@ -459,12 +464,12 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                 // Identical types
                 s1.X = function( s0.Y, s0.X )
             }
-            else if
-                let xType = TypeFinancial.getRecord( s0.Xt ),
-                let yType = TypeFinancial.getRecord( s0.Yt ) {
-                    // Convert X value to type Y
-                    s1.X = function( s0.Y, s0.X * xType.usd / yType.usd )
-                }
+//            else if
+//                let xType = TypeFinancial.getRecord( s0.Xt ),
+//                let yType = TypeFinancial.getRecord( s0.Yt ) {
+//                    // Convert X value to type Y
+//                    s1.X = function( s0.Y, s0.X * xType.usd / yType.usd )
+//                }
             else {
                 return nil
             }
@@ -537,13 +542,13 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                     s1.X = s0.Y / s0.X
                     s1.Xt = s0.Yt
                 }
-                else if
-                    let xType = TypeFinancial.getRecord( s0.Xt ),
-                    let yType = TypeFinancial.getRecord( s0.Yt ) {
-                        // Convert X value to type Y
-                        s1.X = s0.Y / (s0.X * xType.usd / yType.usd)
-                        s1.Xt = TypeTag(.untyped, 0)
-                }
+//                else if
+//                    let xType = TypeFinancial.getRecord( s0.Xt ),
+//                    let yType = TypeFinancial.getRecord( s0.Yt ) {
+//                        // Convert X value to type Y
+//                        s1.X = s0.Y / (s0.X * xType.usd / yType.usd)
+//                        s1.Xt = TypeTag(.untyped, 0)
+//                }
                 else {
                     return nil
                 }
@@ -596,7 +601,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             case .key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9:
                 // Append a digit to exponent
                 if state.exponentText.starts( with: "-") && state.exponentText.count < 4 || state.exponentText.count < 3 {
-                    state.exponentText.append( String(keyCode.rawValue))
+                    state.appendExponentEntry( String(keyCode.rawValue))
                 }
 
             case .dot, .eex:
@@ -630,20 +635,20 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             switch keyCode {
             case .key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9:
                 // Append a digit
-                state.entryText.append( String(keyCode.rawValue))
+                state.appendTextEntry( String(keyCode.rawValue))
                 
             case .dot:
                 if !state.decimalSeen {
-                    state.entryText.append(".")
+                    state.appendTextEntry(".")
                     state.decimalSeen = true
                 }
                 
             case .eex:
                 if !state.decimalSeen {
-                    state.entryText += ".0"
+                    state.appendTextEntry(".0")
                     state.decimalSeen = true
                 }
-                state.entryText += "×10"
+                state.appendTextEntry("×10")
                 state.exponentText = ""
                 state.exponentEntry = true
 
@@ -683,20 +688,20 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             return
         }
         
-        if padCode == .padFiat {
-            acceptTextEntry()
-            financialKeyPress( TypeTag(.fiat, keyCode.rawValue - KeyCode.sk0.rawValue) )
-            return
-        }
+//        if padCode == .padFiat {
+//            acceptTextEntry()
+//            financialKeyPress( TypeTag(.fiat, keyCode.rawValue - KeyCode.sk0.rawValue) )
+//            return
+//        }
         
         switch keyCode {
         case .key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9:
-            startTextEntry( String(keyCode.rawValue) )
+            state.startTextEntry( String(keyCode.rawValue) )
             state.stackLift()
             break
             
         case .dot:
-            startTextEntry( "0." )
+            state.startTextEntry( "0." )
             state.stackLift()
             break
             
@@ -708,20 +713,20 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             break
             
         case .fixL:
-            var trec = getRecord( state.Xt )
-            trec.maxDigits = max(0, trec.maxDigits-1 )
+//            var trec = getRecord( state.Xt )
+//            trec.maxDigits = max(0, trec.maxDigits-1 )
             break
             
         case .fixR:
-            var trec = getRecord( state.Xt )
-            trec.maxDigits = min(15, trec.maxDigits+1 )
+//            var trec = getRecord( state.Xt )
+//            trec.maxDigits = min(15, trec.maxDigits+1 )
             break
             
         default:
             if let op = opTable[keyCode] {
                 // Transition to new calculator state based on operation
                 undoStack.push(state)
-                acceptTextEntry()
+                state.acceptTextEntry()
                 if let newState = op.transition( state ) {
                     state = newState
                 }
@@ -743,7 +748,7 @@ extension Double {
         nf.numberStyle = .decimal
         nf.minimumFractionDigits = 4
         nf.maximumFractionDigits = 4
-        return nf.string(from: NSNumber(value: self)) ?? ""
+        return nf.string(for: self) ?? ""
     }
 
     func displayFormat(_ digits: Int, _ minDigits: Int ) -> String {
@@ -751,7 +756,7 @@ extension Double {
         nf.numberStyle = .decimal
         nf.minimumFractionDigits = minDigits
         nf.maximumFractionDigits = digits
-        return nf.string(from: NSNumber(value: self)) ?? ""
+        return nf.string(for: self) ?? ""
     }
 }
 

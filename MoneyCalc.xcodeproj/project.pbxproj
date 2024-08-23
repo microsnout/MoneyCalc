@@ -21,7 +21,6 @@
 		0CA249DF2C4E752900B88B30 /* ComplexModule in Frameworks */ = {isa = PBXBuildFile; productRef = 0CA249DE2C4E752900B88B30 /* ComplexModule */; };
 		0CA249E12C4E752900B88B30 /* Numerics in Frameworks */ = {isa = PBXBuildFile; productRef = 0CA249E02C4E752900B88B30 /* Numerics */; };
 		0CA249E32C4E752900B88B30 /* RealModule in Frameworks */ = {isa = PBXBuildFile; productRef = 0CA249E22C4E752900B88B30 /* RealModule */; };
-		0CE3EDB92736A18100DA50B9 /* Crypto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CE3EDB82736A18100DA50B9 /* Crypto.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,7 +36,6 @@
 		0C8884AF272B25AB005CFF0C /* KeypadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeypadView.swift; sourceTree = "<group>"; };
 		0C8884B1272B2658005CFF0C /* DisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayView.swift; sourceTree = "<group>"; };
 		0C8884B3272D7A99005CFF0C /* Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
-		0CE3EDB82736A18100DA50B9 /* Crypto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Crypto.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -78,7 +76,6 @@
 				0C88849D272B1B61005CFF0C /* MoneyCalcApp.swift */,
 				0C88849F272B1B61005CFF0C /* CalculatorView.swift */,
 				0C8884AB272B22B8005CFF0C /* CalculatorModel.swift */,
-				0CE3EDB82736A18100DA50B9 /* Crypto.swift */,
 				0C8884AF272B25AB005CFF0C /* KeypadView.swift */,
 				0C8884B1272B2658005CFF0C /* DisplayView.swift */,
 				0C8884B3272D7A99005CFF0C /* Formatting.swift */,
@@ -181,7 +178,6 @@
 				0C8884A0272B1B61005CFF0C /* CalculatorView.swift in Sources */,
 				0C86B9CD274FC45C00640A16 /* Model.xcdatamodeld in Sources */,
 				0C8884B2272B2658005CFF0C /* DisplayView.swift in Sources */,
-				0CE3EDB92736A18100DA50B9 /* Crypto.swift in Sources */,
 				0C054270274FDB7C007AC6BF /* MemoryItem+CoreDataProperties.swift in Sources */,
 				0C05426F274FDB7C007AC6BF /* MemoryItem+CoreDataClass.swift in Sources */,
 				0C88849E272B1B61005CFF0C /* MoneyCalcApp.swift in Sources */,

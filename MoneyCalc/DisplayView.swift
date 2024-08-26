@@ -33,12 +33,14 @@ class ObservableArray<T>: ObservableObject {
 
 struct MonoText: View {
     let content: String
+    let addon: String?
     let charWidth: CGFloat
     let font: Font
     let alignment: VerticalAlignment
 
-    init(_ content: String, charWidth: CGFloat, font: Font = .body, align: VerticalAlignment = .center ) {
+    init(_ content: String, addon: String?, charWidth: CGFloat, font: Font = .body, align: VerticalAlignment = .center ) {
         self.content = content
+        self.addon = addon
         self.charWidth = charWidth
         self.font = font
         self.alignment = align
@@ -50,6 +52,15 @@ struct MonoText: View {
                 Text("\(self.content[self.content.index(self.content.startIndex, offsetBy: index)].description)")
                     .font(font)
                     .foregroundColor(Color("DisplayText")).frame(width: self.charWidth)
+            }
+            .if ( addon != nil ) { view in
+                /// Used to add an underscore cursor in text entry mode
+                HStack( alignment: self.alignment, spacing: 0 ) {
+                    view
+                    Text(addon!)
+                        .font(font)
+                        .foregroundColor(Color(.red)).frame(width: self.charWidth)
+                }
             }
         }
     }
@@ -70,19 +81,25 @@ let textSpecTable: [TextSize: TextSpec] = [
 protocol RowDataItem {
     var prefix:   String? { get }
     var register: String  { get }
+    var regAddon: String? { get }
     var exponent: String? { get }
+    var expAddon: String? { get }
     var suffix:   String? { get }
 }
 
 struct NoPrefix: RowDataItem {
     let prefix: String? = nil
     let register: String
+    let regAddon: String?
     let exponent: String?
+    let expAddon: String?
     let suffix: String?
     
     init(_ row: RowDataItem ) {
         self.register = row.register
+        self.regAddon = row.regAddon
         self.exponent = row.exponent
+        self.expAddon = row.expAddon
         self.suffix = row.suffix
     }
 }
@@ -98,10 +115,14 @@ struct TypedRegister: View {
                     Text(prefix).font(spec.prefixFont).bold().foregroundColor(Color("Frame")).padding(.trailing, 10)
                 }
                 
-                MonoText(row.register, charWidth: spec.monoSpace, font: spec.registerFont)
+                MonoText(row.register, addon: row.regAddon, charWidth: spec.monoSpace, font: spec.registerFont)
                 
                 if let exp: String = row.exponent {
-                    MonoText(exp, charWidth: spec.monoSpace, font: spec.suffixFont, align: .bottom).alignmentGuide(.bottom, computeValue: { d in 25 })
+                    MonoText(exp, 
+                             addon: row.expAddon,
+                             charWidth: spec.monoSpace - 3,
+                             font: spec.suffixFont,
+                             align: .bottom).alignmentGuide(.bottom, computeValue: { d in 25 })
                 }
                 
                 if let suffix = row.suffix {

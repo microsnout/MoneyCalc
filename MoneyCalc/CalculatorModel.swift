@@ -43,7 +43,7 @@ let stackPrefixValues = ["X", "Y", "Z", "T"]
 let regX = 0, regY = 1, regZ = 2, regT = 3, stackSize = 4
 
 enum TypeCode: Int {
-    case untyped = 0, percentage, fiat, crypto, shares, time, compound
+    case untyped = 0, fiat, crypto, time, compound
 }
 
 typealias TypeIndex = Int
@@ -64,17 +64,19 @@ let tagUntyped: TypeTag = TypeTag(.untyped, 0)
 
 let untypedZero: TaggedValue = (tagUntyped, 0.0)
 
-enum FormatMode: Int {
-    case variable = 0, fixed, scientific
-}
+//enum FormatMode: Int {
+//    case variable = 0, fixed, scientific
+//}
 
-struct FormatRecord {
+typealias FormatMode = NumberFormatter.Style
+
+class FormatRecord {
     var suffix: String?
     var mode: FormatMode
     var maxDigits: Int
     var minDigits: Int
     
-    init( suffix: String? = nil, mode: FormatMode = .variable, maxDigits: Int = 4, minDigits: Int = 1 ) {
+    init( suffix: String? = nil, mode: FormatMode = .decimal, maxDigits: Int = 4, minDigits: Int = 1 ) {
         self.suffix = suffix
         self.mode = mode
         self.maxDigits = maxDigits
@@ -140,7 +142,9 @@ extension MemoryItem {
 struct RegisterRow: RowDataItem {
     var prefix: String?
     var register: String
+    var regAddon: String?
     var exponent: String?
+    var expAddon: String?
     var suffix: String?
 }
 
@@ -150,7 +154,7 @@ struct CalcState {
     var noLift: Bool = false
     var memory = [NamedValue]()
     var formatMap: [ TypeTag : FormatRecord ] = [:]
-    var defaultFormat: FormatRecord = FormatRecord( mode: .variable, maxDigits: 4, minDigits: 1 )
+    var defaultFormat: FormatRecord = FormatRecord( mode: .decimal, maxDigits: 4, minDigits: 0 )
     
     // Data entry state
     var entryMode: Bool = false
@@ -160,10 +164,28 @@ struct CalcState {
     var exponentText: String = ""
     
     private func regRow( _ nv: NamedValue ) -> RegisterRow {
-        return RegisterRow(
-            prefix: nv.name,
-            register: "\(nv.value.reg)" )
-//            register: nv.value.reg.displayFormat(4, 1) )
+        let fmt = self.getFormat( tag: nv.value.tag )
+        
+        let nf = NumberFormatter()
+        nf.numberStyle = fmt.mode
+        nf.minimumFractionDigits = fmt.minDigits
+        nf.maximumFractionDigits = fmt.maxDigits
+        
+        let str = nf.string(for: nv.value.reg) ?? ""
+
+        let strParts = str.split( separator: "E" )
+        
+        if strParts.count == 2 {
+            return RegisterRow(
+                prefix: nv.name,
+                register: String(strParts[0]) + "x10",
+                exponent: String(strParts[1]) )
+        }
+        else {
+            return RegisterRow(
+                prefix: nv.name,
+                register: String(strParts[0]) )
+        }
     }
     
     func stackRow( _ index: Int ) -> RegisterRow {
@@ -171,7 +193,9 @@ struct CalcState {
             return RegisterRow(
                 prefix: self.stack[regX].name,
                 register: self.entryText,
-                exponent: self.exponentEntry ? self.exponentText : nil )
+                regAddon: self.exponentEntry ? nil : "_",
+                exponent: self.exponentEntry ? self.exponentText : nil,
+                expAddon: self.exponentEntry ? "_" : nil )
         }
         
         return regRow( self.stack[index] )
@@ -196,6 +220,15 @@ struct CalcState {
            return rec
         }
         return defaultFormat
+    }
+    
+    mutating func updateFormat( _ tag: TypeTag, newFmt: FormatRecord ) {
+        if tag == tagUntyped {
+            self.defaultFormat = newFmt
+        }
+        else {
+            self.formatMap[tag] = newFmt
+        }
     }
     
     mutating func clearEntry() {
@@ -698,29 +731,32 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         case .key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9:
             state.startTextEntry( String(keyCode.rawValue) )
             state.stackLift()
-            break
             
         case .dot:
             state.startTextEntry( "0." )
             state.stackLift()
-            break
             
         case .back:
             // Undo last operation by restoring previous state
             if let lastState = undoStack.pop() {
                 state = lastState
             }
-            break
             
         case .fixL:
-//            var trec = getRecord( state.Xt )
-//            trec.maxDigits = max(0, trec.maxDigits-1 )
-            break
+            let fmt: FormatRecord = state.getFormat(tag: self.state.Xt )
+            fmt.maxDigits = max(1, fmt.maxDigits-1 )
+            state.updateFormat( self.state.Xt, newFmt: fmt)
             
         case .fixR:
-//            var trec = getRecord( state.Xt )
-//            trec.maxDigits = min(15, trec.maxDigits+1 )
-            break
+            let fmt: FormatRecord = state.getFormat(tag: self.state.Xt )
+            fmt.maxDigits = min(15, fmt.maxDigits+1 )
+            state.updateFormat( self.state.Xt, newFmt: fmt)
+            
+        case .fix, .sci:
+            let fmt: FormatRecord = state.getFormat(tag: self.state.Xt )
+            let map: [KeyCode : FormatMode] = [.fix : .decimal, .sci : .scientific]
+            fmt.mode = map[keyCode]!
+            state.updateFormat( self.state.Xt, newFmt: fmt)
             
         default:
             if let op = opTable[keyCode] {
@@ -737,23 +773,14 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                     }
                 }
             }
-            break
         }
     }
 }
 
 extension Double {
-    var fixedFormat: String {
+    func displayFormat(_ mode: FormatMode, _ digits: Int, _ minDigits: Int ) -> String {
         let nf = NumberFormatter()
-        nf.numberStyle = .decimal
-        nf.minimumFractionDigits = 4
-        nf.maximumFractionDigits = 4
-        return nf.string(for: self) ?? ""
-    }
-
-    func displayFormat(_ digits: Int, _ minDigits: Int ) -> String {
-        let nf = NumberFormatter()
-        nf.numberStyle = .decimal
+        nf.numberStyle = mode
         nf.minimumFractionDigits = minDigits
         nf.maximumFractionDigits = digits
         return nf.string(for: self) ?? ""

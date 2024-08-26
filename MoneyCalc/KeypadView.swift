@@ -134,12 +134,12 @@ struct Keypad: View {
 // ********************************************
 
 struct SoftKey: Identifiable {
-    var kc: KeyCode
+    var kc: [KeyCode]
     var ch: String
     
-    var id: Int { return self.kc.rawValue }
+    var id: Int { return self.kc[0].rawValue }
     
-    init(_ kc: KeyCode, _ ch: String ) {
+    init(_ kc: [KeyCode], _ ch: String ) {
         self.kc = kc
         self.ch = ch
     }
@@ -152,6 +152,23 @@ struct RowSpec {
     var caption: String
 }
 
+
+extension View {
+    /// Applies the given transform if the given condition evaluates to `true`.
+    /// - Parameters:
+    ///   - condition: The condition to evaluate.
+    ///   - transform: The transform to apply to the source `View`.
+    /// - Returns: Either the original `View` or the modified `View` if the condition is `true`.
+    @ViewBuilder func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            self
+        }
+    }
+}
+
+
 struct SoftKeyRow: View {
     
     var keySpec: KeySpec
@@ -163,7 +180,7 @@ struct SoftKeyRow: View {
         HStack {
             ForEach(rowSpec.keys, id: \.id) { key in
                 Button( action: {
-                    keyPressHandler.keyPress( (rowSpec.pc, key.kc) )
+                    keyPressHandler.keyPress( (rowSpec.pc, key.kc[0]) )
                 })
                 {
                     let labelList = key.ch.split(separator: "|")
@@ -182,6 +199,17 @@ struct SoftKeyRow: View {
                                 .background( keySpec.buttonColor)
                                 .foregroundColor( keySpec.textColor),
                             alignment: .center)
+                        .if( labelList.count > 1 ) { view in
+                                view.contextMenu {
+                                    ForEach(0..<labelList.count, id: \.self) { index in
+                                        Button {
+                                            keyPressHandler.keyPress( (rowSpec.pc, key.kc[index]) )
+                                        } label: {
+                                            Text( labelList[index])
+                                        }
+                                    }
+                                }
+                        }
                     Spacer()
                 }
              }

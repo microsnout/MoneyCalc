@@ -72,12 +72,12 @@ struct CalculatorView: View {
     
     let fiatRowSpec = RowSpec (
         pc: .padFiat,
-        keys: [ SoftKey(.sk0, "USD"),
-                SoftKey(.sk1, "CAD"),
-                SoftKey(.sk2, "EUR"),
-                SoftKey(.sk3, "GBP"),
-                SoftKey(.sk4, "AUD"),
-                SoftKey(.sk5, "JPY")
+        keys: [ SoftKey([.sk0], "USD"),
+                SoftKey([.sk1], "CAD"),
+                SoftKey([.sk2], "EUR"),
+                SoftKey([.sk3], "GBP"),
+                SoftKey([.sk4], "AUD"),
+                SoftKey([.sk5], "JPY")
               ],
         fontSize: 15.0,
         caption: "Currency"
@@ -85,12 +85,12 @@ struct CalculatorView: View {
     
     let fn0RowSpec = RowSpec (
         pc: .padFn0,
-        keys: [ SoftKey(.fix, "FIX|SCI|ENG"),
-                SoftKey(.sin, "sin"),
-                SoftKey(.cos, "cos"),
-                SoftKey(.tan, "tan"),
-                SoftKey(.log, "log"),
-                SoftKey(.pi,  "\u{1d70b}")
+        keys: [ SoftKey([.fix, .sci], "FIX|SCI"),
+                SoftKey([.sin], "sin"),
+                SoftKey([.cos], "cos"),
+                SoftKey([.tan], "tan"),
+                SoftKey([.log], "log"),
+                SoftKey([.pi],  "\u{1d70b}")
             ],
         fontSize: 18.0,
         caption: "Fn0"

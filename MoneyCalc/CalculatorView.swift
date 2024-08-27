@@ -70,14 +70,14 @@ struct CalculatorView: View {
         radius: 10, spacing: 10,
         buttonColor: Color("KeyColor"), textColor: Color("KeyText"))
     
-    let fiatRowSpec = RowSpec (
-        pc: .padFiat,
-        keys: [ SoftKey([.sk0], "USD"),
-                SoftKey([.sk1], "CAD"),
-                SoftKey([.sk2], "EUR"),
-                SoftKey([.sk3], "GBP"),
-                SoftKey([.sk4], "AUD"),
-                SoftKey([.sk5], "JPY")
+    let unitRowSpec = RowSpec (
+        pc: .padUnit,
+        keys: [ SoftKey([.deg], "deg"),
+                SoftKey([.rad], "rad"),
+                SoftKey([.sec], "sec"),
+                SoftKey([.min], "min"),
+                SoftKey([.m],   "m"),
+                SoftKey([.km],  "km")
               ],
         fontSize: 15.0,
         caption: "Currency"
@@ -142,7 +142,7 @@ struct CalculatorView: View {
                         // Main calculator display
                         Display( model: model )
                         
-                        SoftKeyRow( keySpec: skSpec, rowSpec: fiatRowSpec, keyPressHandler: model )
+                        SoftKeyRow( keySpec: skSpec, rowSpec: unitRowSpec, keyPressHandler: model )
                             .padding( .vertical, 5 )
                         
                         SoftKeyRow( keySpec: skSpec, rowSpec: fn0RowSpec, keyPressHandler: model )

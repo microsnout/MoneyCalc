@@ -64,9 +64,17 @@ struct TypeTag: Hashable {
     }
 }
 
+typealias FormatMode = NumberFormatter.Style
+
+struct FormatRec {
+    var mode: FormatMode = .decimal
+    var digits: Int = 4
+}
+
 struct TaggedValue {
     var tag: TypeTag
     var reg: Double
+    var fmt: FormatRec
     
     var type: TypeCode { self.tag.code }
     var index: Int { self.tag.index }
@@ -75,9 +83,10 @@ struct TaggedValue {
         return tag.code == code
     }
     
-    init( _ tag: TypeTag, _ reg: Double = 0.0 ) {
+    init( _ tag: TypeTag, _ reg: Double = 0.0, format: FormatRec = FormatRec() ) {
         self.tag = tag
         self.reg = reg
+        self.fmt = format
     }
 }
 
@@ -88,22 +97,6 @@ let untypedZero: TaggedValue = TaggedValue(tagUntyped)
 //enum FormatMode: Int {
 //    case variable = 0, fixed, scientific
 //}
-
-typealias FormatMode = NumberFormatter.Style
-
-class FormatRecord {
-    var suffix: String?
-    var mode: FormatMode
-    var maxDigits: Int
-    var minDigits: Int
-    
-    init( suffix: String? = nil, mode: FormatMode = .decimal, maxDigits: Int = 4, minDigits: Int = 1 ) {
-        self.suffix = suffix
-        self.mode = mode
-        self.maxDigits = maxDigits
-        self.minDigits = minDigits
-    }
-}
 
 struct NamedValue {
     var name: String?
@@ -129,12 +122,10 @@ struct CalcState {
     var lastX: TaggedValue = untypedZero
     var noLift: Bool = false
     var memory = [NamedValue]()
-    var formatMap: [ TypeTag : FormatRecord ] = [:]
-    var defaultFormat: FormatRecord = FormatRecord( mode: .decimal, maxDigits: 4, minDigits: 0 )
+    var defaultFormat: FormatRec = FormatRec( mode: .decimal, digits: 4 )
     
     // Data entry state
     var entryMode: Bool = false
-    var decimalSeen: Bool = false
     var exponentEntry: Bool = false
     var entryText: String = ""
     var exponentText: String = ""
@@ -165,13 +156,13 @@ struct CalcState {
     }
     
     private func regRow( _ nv: NamedValue ) -> RegisterRow {
-        let fmt = self.getFormat( tag: nv.value.tag )
+        let fmt = nv.value.fmt
         
         let nf = NumberFormatter()
         nf.numberStyle = fmt.mode
-        nf.minimumFractionDigits = fmt.minDigits
-        nf.maximumFractionDigits = fmt.maxDigits
-        
+        nf.minimumFractionDigits = 0
+        nf.maximumFractionDigits = fmt.digits
+
         let str = nf.string(for: nv.value.reg) ?? ""
 
         let strParts = str.split( separator: "E" )
@@ -218,25 +209,8 @@ struct CalcState {
         }
     }
     
-    func getFormat( tag: TypeTag ) -> FormatRecord {
-        if let rec = formatMap[tag] {
-           return rec
-        }
-        return defaultFormat
-    }
-    
-    mutating func updateFormat( _ tag: TypeTag, newFmt: FormatRecord ) {
-        if tag == tagUntyped {
-            self.defaultFormat = newFmt
-        }
-        else {
-            self.formatMap[tag] = newFmt
-        }
-    }
-    
     mutating func clearEntry() {
         self.entryMode = false
-        self.decimalSeen = false
         self.exponentEntry = false
         self.entryText.removeAll(keepingCapacity: true)
         self.exponentText.removeAll(keepingCapacity: true)
@@ -248,7 +222,6 @@ struct CalcState {
         self.clearEntry()
         self.entryMode = true
         self.entryText = str
-        self.decimalSeen = str.contains(".")
         
         logM.debug("StartTextEntry: \(str)")
     }
@@ -259,15 +232,24 @@ struct CalcState {
             
             logM.debug( "AcceptTextEntry: \(num)")
             
-            if self.exponentEntry {
+            if exponentEntry {
+                /// Eliminate 'x10'
                 num.removeLast(3)
             }
-            
-            let str: String = self.exponentEntry && !self.exponentText.isEmpty ? num + "E" + self.exponentText : num
-            
-            self.stack[regX].value.reg = Double(str)!
-            self.stack[regX].value.tag = tagUntyped
-            self.clearEntry()
+
+            if exponentEntry && !exponentText.isEmpty {
+                /// Exponential entered
+                let str: String = num + "E" + exponentText
+                stack[regX].value.reg = Double(str)!
+                stack[regX].value.tag = tagUntyped
+                stack[regX].value.fmt.mode = .scientific
+            }
+            else {
+                stack[regX].value.reg = Double(num)!
+                stack[regX].value.tag = tagUntyped
+                stack[regX].value.fmt.mode = .decimal
+            }
+            clearEntry()
         }
     }
     
@@ -295,9 +277,14 @@ struct CalcState {
         set { stack[regX].value.tag = newValue }
     }
     
+    var Xfmt: FormatRec {
+        get { stack[regX].value.fmt }
+        set { stack[regX].value.fmt = newValue }
+    }
+    
     var Xtv: TaggedValue {
         get { stack[regX].value }
-        set { self.Xt = newValue.tag; self.X = newValue.reg }
+        set { self.Xt = newValue.tag; self.X = newValue.reg; self.Xfmt = newValue.fmt }
     }
     
     var Y: Double {
@@ -327,8 +314,7 @@ struct CalcState {
     
     mutating func stackDrop(_ by: Int = 1 ) {
         for rx in regX ..< stackSize-1 {
-            self.stack[rx].value.reg = self.stack[rx+1].value.reg
-            self.stack[rx].value.tag = self.stack[rx+1].value.tag
+            self.stack[rx].value = self.stack[rx+1].value
         }
     }
 
@@ -338,8 +324,7 @@ struct CalcState {
             return
         }
         for rx in stride( from: stackSize-1, to: regX, by: -1 ) {
-            self.stack[rx].value.reg = self.stack[rx-1].value.reg
-            self.stack[rx].value.tag = self.stack[rx-1].value.tag
+            self.stack[rx].value = self.stack[rx-1].value
         }
     }
 
@@ -347,8 +332,7 @@ struct CalcState {
         let xtv = self.Xtv
         stackDrop()
         let last = stackSize-1
-        self.stack[last].value.reg = xtv.reg
-        self.stack[last].value.tag = xtv.tag
+        self.stack[last].value = xtv
     }
 }
 
@@ -732,16 +716,11 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                 state.appendTextEntry( String(keyCode.rawValue))
                 
             case .dot:
-                if !state.decimalSeen {
+                if !state.entryText.contains(".") {
                     state.appendTextEntry(".")
-                    state.decimalSeen = true
                 }
                 
             case .eex:
-                if !state.decimalSeen {
-                    state.appendTextEntry(".0")
-                    state.decimalSeen = true
-                }
                 state.appendTextEntry("×10")
                 state.exponentText = ""
                 state.exponentEntry = true
@@ -755,10 +734,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                 }
 
             case .back:
-                if state.entryText.removeLast() == "." {
-                    state.decimalSeen = false
-                }
-                
+                state.entryText.removeLast()
                 if state.entryText.isEmpty {
                     // Clear X, exit entry mode, no further actions
                     state.clearEntry()
@@ -776,7 +752,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     
     
     func keyPress(_ event: KeyEvent) {
-        let (padCode, keyCode) = event
+        let ( _, keyCode) = event
         
         if state.entryMode && EntryModeKeypress(keyCode) {
             return
@@ -798,21 +774,21 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             }
             
         case .fixL:
-            let fmt: FormatRecord = state.getFormat(tag: self.state.Xt )
-            fmt.maxDigits = max(1, fmt.maxDigits-1 )
-            state.updateFormat( self.state.Xt, newFmt: fmt)
+            var fmt: FormatRec = state.Xtv.fmt
+            fmt.digits = max(1, fmt.digits-1)
+            state.Xfmt = fmt
             
         case .fixR:
-            let fmt: FormatRecord = state.getFormat(tag: self.state.Xt )
-            fmt.maxDigits = min(15, fmt.maxDigits+1 )
-            state.updateFormat( self.state.Xt, newFmt: fmt)
-            
-        case .fix, .sci:
-            let fmt: FormatRecord = state.getFormat(tag: self.state.Xt )
-            let map: [KeyCode : FormatMode] = [.fix : .decimal, .sci : .scientific]
-            fmt.mode = map[keyCode]!
-            state.updateFormat( self.state.Xt, newFmt: fmt)
-            
+            var fmt: FormatRec = state.Xtv.fmt
+            fmt.digits = min(15, fmt.digits+1)
+            state.Xfmt = fmt
+
+//        case .fix, .sci:
+//            let fmt: FormatRecord = state.getFormat(tag: self.state.Xt )
+//            let map: [KeyCode : FormatMode] = [.fix : .decimal, .sci : .scientific]
+//            fmt.mode = map[keyCode]!
+//            state.updateFormat( self.state.Xt, newFmt: fmt)
+//            
         case .pi:
             undoStack.push(state)
             state.stackLift()
@@ -825,6 +801,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                 state.acceptTextEntry()
                 if let newState = op.transition( state ) {
                     state = newState
+                    state.noLift = false
                 }
                 else {
                     // else no-op as there was no new state

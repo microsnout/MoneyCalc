@@ -167,6 +167,7 @@ struct CalculatorView: View {
                     .background( Color("Background"))
                 }
             }
+            .ignoresSafeArea(.keyboard)
         }
     }
 }

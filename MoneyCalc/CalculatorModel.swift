@@ -45,7 +45,7 @@ let stackPrefixValues = ["X", "Y", "Z", "T"]
 let regX = 0, regY = 1, regZ = 2, regT = 3, stackSize = 4
 
 enum TypeCode: Int {
-    case none = 0, untyped, rad, deg, user
+    case none = 0, untyped, rad, deg, distance, area, volume, time, velocity, currency
 }
 
 let typeSuffix: [TypeCode : String] = [.untyped:"", .rad:"rad", .deg:"deg"]
@@ -55,6 +55,10 @@ typealias TypeIndex = Int
 struct TypeTag: Hashable {
     var code: TypeCode
     var index: TypeIndex
+    
+    func isType( _ code: TypeCode ) -> Bool {
+        return self.code == code
+    }
     
     var suffix: String { return typeSuffix[self.code, default: ""] }
     
@@ -93,14 +97,15 @@ struct TaggedValue {
 let tagNone: TypeTag = TypeTag(.none)
 let tagUntyped: TypeTag = TypeTag(.untyped)
 let untypedZero: TaggedValue = TaggedValue(tagUntyped)
-
-//enum FormatMode: Int {
-//    case variable = 0, fixed, scientific
-//}
+let valueNone: TaggedValue = TaggedValue(tagNone)
 
 struct NamedValue {
     var name: String?
     var value: TaggedValue
+    
+    func isType( _ code: TypeCode ) -> Bool {
+        return value.tag.code == code
+    }
     
     init(_ name: String? = nil, value: TaggedValue ) {
         self.name = name
@@ -156,6 +161,10 @@ struct CalcState {
     }
     
     private func regRow( _ nv: NamedValue ) -> RegisterRow {
+        if nv.isType(.none) {
+            return RegisterRow( prefix: nv.name, register: "-")
+        }
+        
         let fmt = nv.value.fmt
         
         let nf = NumberFormatter()
@@ -320,9 +329,12 @@ struct CalcState {
 
     mutating func stackLift(_ by: Int = 1 ) {
         if self.noLift {
+            logM.debug("stackLift: No-op")
             self.noLift = false
             return
         }
+        
+        logM.debug("stackLift: LIFT")
         for rx in stride( from: stackSize-1, to: regX, by: -1 ) {
             self.stack[rx].value = self.stack[rx-1].value
         }
@@ -363,7 +375,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     var undoStack = UndoStack()
 
     // Display window into register stack
-    static let displayRows = 3
+    static let displayRows = 4
     var rowCount: Int { return CalculatorModel.displayRows }
     
     private let entryKeys:Set<KeyCode> = [.key0, .key1, .key2, .key3, .key4, .key5, .key6, .key7, .key8, .key9, .dot, .sign, .back, .eex]
@@ -613,17 +625,10 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                     s1.X = s0.Y / s0.X
                     s1.Xt = tagUntyped
                 }
-                else if s0.Xt.code == .untyped {
+                else if s0.Xt.isType(.untyped) {
                     s1.X = s0.Y / s0.X
                     s1.Xt = s0.Yt
                 }
-//                else if
-//                    let xType = TypeFinancial.getRecord( s0.Xt ),
-//                    let yType = TypeFinancial.getRecord( s0.Yt ) {
-//                        // Convert X value to type Y
-//                        s1.X = s0.Y / (s0.X * xType.usd / yType.usd)
-//                        s1.Xt = tagUntyped
-//                }
                 else {
                     return nil
                 }
@@ -801,7 +806,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                 state.acceptTextEntry()
                 if let newState = op.transition( state ) {
                     state = newState
-                    state.noLift = false
+//                    state.noLift = false
                 }
                 else {
                     // else no-op as there was no new state

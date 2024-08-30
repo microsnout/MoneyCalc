@@ -32,7 +32,7 @@ struct Key: Identifiable {
     var size: Int           // Either 1 or 2, single width keys or double width
     var text: String?
     var fontSize:Double?
-    var image: Image?
+    var image: ImageResource?
     
     var id: Int { return self.kc.rawValue }
 
@@ -41,13 +41,7 @@ struct Key: Identifiable {
         self.text = label
         self.size = size
         self.fontSize = fontSize
-        
-        if let iRes = image {
-            self.image = Image(iRes)
-        }
-        else {
-            self.image = nil
-        }
+        self.image = image
     }
 }
 
@@ -102,7 +96,8 @@ struct Keypad: View {
                                     alignment: .center)
                             .cornerRadius(keySpec.radius)
                             .shadow(radius: keySpec.radius)
-                            .overlay( image.renderingMode(.template).foregroundColor(keySpec.textColor), alignment: .center)
+                            .overlay(
+                                Image(image).renderingMode(.template).foregroundColor(keySpec.textColor), alignment: .center)
                     }
                     else if let label = key.text {
                         Rectangle()
@@ -136,12 +131,14 @@ struct Keypad: View {
 struct SoftKey: Identifiable {
     var kc: [KeyCode]
     var ch: String
-    
+    var fontSize:Double?
+
     var id: Int { return self.kc[0].rawValue }
     
-    init(_ kc: [KeyCode], _ ch: String ) {
+    init(_ kc: [KeyCode], _ ch: String, fontSize: Double? = nil ) {
         self.kc = kc
         self.ch = ch
+        self.fontSize = fontSize
     }
 }
 
@@ -175,7 +172,7 @@ extension View {
     ///   - condition: The condition to evaluate.
     ///   - transform: The transform to apply to the source `View`.
     /// - Returns: Either the original `View` or the modified `View` if the condition is `true`.
-    @ViewBuilder func `ifelse`<Content: View>(_ condition: Bool, elseT: (Self) -> Content, transform: (Self) -> Content) -> some View {
+    @ViewBuilder func `ifelse`<Content: View>(_ condition: Bool, transform: (Self) -> Content, elseT: (Self) -> Content) -> some View {
         if condition {
             transform(self)
         } else {
@@ -211,7 +208,7 @@ struct SoftKeyRow: View {
                         .cornerRadius(keySpec.radius)
                         .overlay(
                             Text("\(label)")
-                                .font(.system(size: rowSpec.fontSize ))
+                                .font(.system(size: key.fontSize == nil ? rowSpec.fontSize : key.fontSize! ))
                                 .background( keySpec.buttonColor)
                                 .foregroundColor( keySpec.textColor),
                             alignment: .center)

@@ -233,7 +233,7 @@ struct MemoryDisplay: View {
                                     Text( "-Unnamed-" ).font(.footnote).foregroundColor(.gray).listRowBackground(Color("List0"))
                                 }
                             }
-                            TypedRegister( row: NoPrefix(item), size: .small )
+                            TypedRegister( row: NoPrefix(item), size: .small ).padding( .horizontal, 20)
                         }
                         .swipeActions( edge: .leading, allowsFullSwipe: true ) {
                             ForEach ( leadingOps, id: \.key) { key, text, color in
@@ -257,7 +257,7 @@ struct MemoryDisplay: View {
                 .navigationBarHidden(false)
                 .navigationBarItems( trailing: addButton)
                 .environment( \.editMode, $editMode)
-                .listStyle( InsetListStyle() )
+                .listStyle( PlainListStyle() )
                 .padding( .horizontal, 0)
                 .padding( .top, 0)
             }

@@ -85,7 +85,7 @@ struct CalculatorView: View {
     
     let fn0RowSpec = RowSpec (
         pc: .padFn0,
-        keys: [ SoftKey([.fix, .sci], "FIX|SCI"),
+        keys: [ SoftKey([.fix, .sci], "FIX|SCI", fontSize: 14),
                 SoftKey([.sin], "sin"),
                 SoftKey([.cos], "cos"),
                 SoftKey([.tan], "tan"),

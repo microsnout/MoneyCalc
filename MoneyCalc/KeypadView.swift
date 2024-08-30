@@ -102,7 +102,7 @@ struct Keypad: View {
                                     alignment: .center)
                             .cornerRadius(keySpec.radius)
                             .shadow(radius: keySpec.radius)
-                            .overlay( image.foregroundColor(keySpec.textColor), alignment: .center)
+                            .overlay( image.renderingMode(.template).foregroundColor(keySpec.textColor), alignment: .center)
                     }
                     else if let label = key.text {
                         Rectangle()
@@ -164,6 +164,22 @@ extension View {
             transform(self)
         } else {
             self
+        }
+    }
+}
+
+
+extension View {
+    /// Applies the given transform if the given condition evaluates to `true`.
+    /// - Parameters:
+    ///   - condition: The condition to evaluate.
+    ///   - transform: The transform to apply to the source `View`.
+    /// - Returns: Either the original `View` or the modified `View` if the condition is `true`.
+    @ViewBuilder func `ifelse`<Content: View>(_ condition: Bool, elseT: (Self) -> Content, transform: (Self) -> Content) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            elseT(self)
         }
     }
 }

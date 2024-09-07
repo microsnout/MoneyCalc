@@ -44,30 +44,6 @@ let stackPrefixValues = ["X", "Y", "Z", "T"]
 // Register index values
 let regX = 0, regY = 1, regZ = 2, regT = 3, stackSize = 4
 
-enum TypeCode: Int {
-    case none = 0, untyped, rad, deg, distance, area, volume, time, velocity, currency
-}
-
-let typeSuffix: [TypeCode : String] = [.untyped:"", .rad:"rad", .deg:"deg"]
-
-typealias TypeIndex = Int
-
-struct TypeTag: Hashable {
-    var code: TypeCode
-    var index: TypeIndex
-    
-    func isType( _ code: TypeCode ) -> Bool {
-        return self.code == code
-    }
-    
-    var suffix: String { return typeSuffix[self.code, default: ""] }
-    
-    init( _ code: TypeCode, _ index: TypeIndex = 0 ) {
-        self.code = code
-        self.index = index
-    }
-}
-
 typealias FormatMode = NumberFormatter.Style
 
 struct FormatRec {
@@ -80,11 +56,11 @@ struct TaggedValue {
     var reg: Double
     var fmt: FormatRec
     
-    var type: TypeCode { self.tag.code }
-    var index: Int { self.tag.index }
+    var uid: UnitId { self.tag.uid }
+    var tid: TypeId { self.tag.tid }
     
-    func isType( _ code: TypeCode ) -> Bool {
-        return tag.code == code
+    func isUnit( _ uid: UnitId ) -> Bool {
+        return self.tag.uid == uid
     }
     
     init( _ tag: TypeTag, _ reg: Double = 0.0, format: FormatRec = FormatRec() ) {
@@ -94,8 +70,6 @@ struct TaggedValue {
     }
 }
 
-let tagNone: TypeTag = TypeTag(.none)
-let tagUntyped: TypeTag = TypeTag(.untyped)
 let untypedZero: TaggedValue = TaggedValue(tagUntyped)
 let valueNone: TaggedValue = TaggedValue(tagNone)
 
@@ -103,8 +77,8 @@ struct NamedValue {
     var name: String?
     var value: TaggedValue
     
-    func isType( _ code: TypeCode ) -> Bool {
-        return value.tag.code == code
+    func isType( _ tt: TypeTag ) -> Bool {
+        return value.tag == tt
     }
     
     init(_ name: String? = nil, value: TaggedValue ) {
@@ -135,33 +109,18 @@ struct CalcState {
     var entryText: String = ""
     var exponentText: String = ""
     
-    static let conversionMap: [ TypeCode : [(TypeCode, Double)]] = [
-        .deg : [(.rad, 360.0/(2*Double.pi))],
-        .rad : [(.deg, (2*Double.pi)/360.0)]
-    ]
-    
-    mutating func convertX( to: TypeCode ) -> Bool {
-        if Xtv.isType(.untyped) {
-            /// Any untyped value can convert
-            Xt = TypeTag(to)
+    mutating func convertX( toTag: TypeTag ) -> Bool {
+        if let seq = unitConvert( from: Xt, to: toTag ) {
+            Xtv = TaggedValue( toTag, seq.op(X) )
             return true
         }
         
-        let xList = CalcState.conversionMap[ to, default: [] ]
-        
-        for (fromC, ratio) in xList {
-            if fromC == Xt.code {
-                Xtv = TaggedValue( TypeTag(to, 0), X * ratio )
-                return true
-            }
-        }
-        
-        /// Failed to find conversion
+        // Failed to find conversion
         return false
     }
     
     private func regRow( _ nv: NamedValue ) -> RegisterRow {
-        if nv.isType(.none) {
+        if nv.isType(tagNone) {
             return RegisterRow( prefix: nv.name, register: "-")
         }
         
@@ -181,13 +140,13 @@ struct CalcState {
                 prefix: nv.name,
                 register: String(strParts[0]) + "x10",
                 exponent: String(strParts[1]),
-                suffix: nv.value.tag.suffix)
+                suffix: nv.value.tag.symbol)
         }
         else {
             return RegisterRow(
                 prefix: nv.name,
                 register: String(strParts[0]),
-                suffix: nv.value.tag.suffix)
+                suffix: nv.value.tag.symbol)
         }
     }
     
@@ -442,11 +401,11 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     }
     
     class UnaryOp: StateOperator {
-        let parmType: TypeCode?
-        let resultType: TypeCode?
+        let parmType: TypeTag?
+        let resultType: TypeTag?
         let function: (Double) -> Double
         
-        init( parm: TypeCode? = nil, result: TypeCode? = nil, _ function: @escaping (Double) -> Double ) {
+        init( parm: TypeTag? = nil, result: TypeTag? = nil, _ function: @escaping (Double) -> Double ) {
             self.parmType = parm
             self.resultType = result
             self.function = function
@@ -456,16 +415,16 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             var s1 = s0
             
             if let xType = self.parmType {
-                /// Check type of parameter
-                if !s1.convertX(to: xType) {
-                    /// Cannot convert to required type
+                // Check type of parameter
+                if !s1.convertX( toTag: xType) {
+                    // Cannot convert to required type
                     return nil
                 }
             }
             s1.X = function( s1.X )
             
             if let rType = self.resultType {
-                s1.Xt = TypeTag(rType, 0)
+                s1.Xt = rType
             }
             return s1
         }
@@ -479,7 +438,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         }
         
         func transition(_ s0: CalcState ) -> CalcState? {
-            if s0.Yt.code != .untyped || s0.Xt.code != .untyped {
+            if s0.Yt.uid != .untyped || s0.Xt.uid != .untyped {
                 // Cannot use typed values
                 return nil
             }
@@ -499,7 +458,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         }
         
         func transition(_ s0: CalcState ) -> CalcState? {
-            if s0.Yt.code == .untyped && s0.Xt.code != .untyped {
+            if s0.Yt.uid == .untyped && s0.Xt.uid != .untyped {
                 // Cannot convert X operand back to untyped
                 return nil
             }
@@ -511,17 +470,11 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             if s0.Yt == s0.Xt {
                 // Identical types
                 s1.X = function( s0.Y, s0.X )
+                return s1
             }
-//            else if
-//                let xType = TypeFinancial.getRecord( s0.Xt ),
-//                let yType = TypeFinancial.getRecord( s0.Yt ) {
-//                    // Convert X value to type Y
-//                    s1.X = function( s0.Y, s0.X * xType.usd / yType.usd )
-//                }
-            else {
-                return nil
-            }
-            return s1
+            
+            // Op not possible
+            return nil
         }
     }
     
@@ -533,11 +486,12 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         }
         
         func transition(_ s0: CalcState ) -> CalcState? {
-            guard s0.Xt.code == .untyped else {
+            guard s0.Xt.uid == .untyped else {
                 // X operand must be an untyped value
                 return nil
             }
-            // Ressult will be same type as Y
+            
+            // Result will be same type as Y
             var s1 = s0
             s1.stackDrop()
             s1.X = function( s0.Y, s0.X )
@@ -578,16 +532,20 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     }
     
     class Convert: StateOperator {
-        let toType: TypeCode
+        let toType: TypeTag
         
-        init( to: TypeCode ) {
+        init( to: TypeTag ) {
             self.toType = to
+        }
+        
+        init( sym: String ) {
+            self.toType = TypeDef.symDict[sym, default: tagNone]
         }
         
         func transition(_ s0: CalcState ) -> CalcState? {
             var s1 = s0
 
-            if s1.convertX(to: toType) {
+            if s1.convertX( toTag: toType) {
                 return s1
             }
             else {
@@ -608,12 +566,12 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         .y2x:   BinaryOpReal( pow ),
         
         // Math function row 0
-        .sin:   UnaryOp( parm: .rad, result: .untyped, sin ),
-        .cos:   UnaryOp( parm: .rad, result: .untyped, cos ),
-        .tan:   UnaryOp( parm: .rad, result: .untyped, tan ),
+        .sin:   UnaryOp( parm: tagRad, result: tagUntyped, sin ),
+        .cos:   UnaryOp( parm: tagRad, result: tagUntyped, cos ),
+        .tan:   UnaryOp( parm: tagRad, result: tagUntyped, tan ),
         
-        .log:   UnaryOp( result: .untyped, log10 ),
-        .ln:    UnaryOp( result: .untyped, log ),
+        .log:   UnaryOp( result: tagUntyped, log10 ),
+        .ln:    UnaryOp( result: tagUntyped, log ),
 
         .divide:
             CustomOp { s0 in
@@ -626,10 +584,21 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                     s1.Xt = tagUntyped
                 }
                 else if s0.Xt.isType(.untyped) {
+                    // Scaling typed value by an untyped
                     s1.X = s0.Y / s0.X
                     s1.Xt = s0.Yt
                 }
+                else if let tc = typeProduct(s0.Yt, s0.Xt, quotient: true) {
+                    if let tag = lookupTypeTag(tc) {
+                        s1.X = s0.Y / s0.X
+                        s1.Xt = tag
+                    }
+                    else {
+                        return nil
+                    }
+                }
                 else {
+                    // Cannot divide these types
                     return nil
                 }
                 return s1
@@ -669,8 +638,12 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                 return s1
             },
         
-        .deg: Convert( to: .deg ),
-        .rad: Convert( to: .rad )
+        .deg: Convert( sym: "deg" ),
+        .rad: Convert( sym: "rad" ),
+        .sec: Convert( sym: "sec" ),
+        .min: Convert( sym: "min" ),
+        .m:   Convert( sym: "m"   ),
+        .km:  Convert( sym: "km"  )
     ]
     
     

@@ -18,6 +18,7 @@
 		0CA249DF2C4E752900B88B30 /* ComplexModule in Frameworks */ = {isa = PBXBuildFile; productRef = 0CA249DE2C4E752900B88B30 /* ComplexModule */; };
 		0CA249E12C4E752900B88B30 /* Numerics in Frameworks */ = {isa = PBXBuildFile; productRef = 0CA249E02C4E752900B88B30 /* Numerics */; };
 		0CA249E32C4E752900B88B30 /* RealModule in Frameworks */ = {isa = PBXBuildFile; productRef = 0CA249E22C4E752900B88B30 /* RealModule */; };
+		0CEC972A2C873F2F00530589 /* units.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CEC97292C873F2F00530589 /* units.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +31,7 @@
 		0C8884AF272B25AB005CFF0C /* KeypadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeypadView.swift; sourceTree = "<group>"; };
 		0C8884B1272B2658005CFF0C /* DisplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayView.swift; sourceTree = "<group>"; };
 		0C8884B3272D7A99005CFF0C /* Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
+		0CEC97292C873F2F00530589 /* units.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = units.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -68,6 +70,7 @@
 				0C88849D272B1B61005CFF0C /* MoneyCalcApp.swift */,
 				0C88849F272B1B61005CFF0C /* CalculatorView.swift */,
 				0C8884AB272B22B8005CFF0C /* CalculatorModel.swift */,
+				0CEC97292C873F2F00530589 /* units.swift */,
 				0C8884AF272B25AB005CFF0C /* KeypadView.swift */,
 				0C8884B1272B2658005CFF0C /* DisplayView.swift */,
 				0C8884B3272D7A99005CFF0C /* Formatting.swift */,
@@ -169,6 +172,7 @@
 				0C8884A0272B1B61005CFF0C /* CalculatorView.swift in Sources */,
 				0C8884B2272B2658005CFF0C /* DisplayView.swift in Sources */,
 				0C88849E272B1B61005CFF0C /* MoneyCalcApp.swift in Sources */,
+				0CEC972A2C873F2F00530589 /* units.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

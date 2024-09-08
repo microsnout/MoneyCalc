@@ -438,7 +438,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         }
         
         func transition(_ s0: CalcState ) -> CalcState? {
-            if s0.Yt.uid != .untyped || s0.Xt.uid != .untyped {
+            if s0.Yt.uid != uidUntyped || s0.Xt.uid != uidUntyped {
                 // Cannot use typed values
                 return nil
             }
@@ -458,7 +458,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         }
         
         func transition(_ s0: CalcState ) -> CalcState? {
-            if s0.Yt.uid == .untyped && s0.Xt.uid != .untyped {
+            if s0.Yt.uid == uidUntyped && s0.Xt.uid != uidUntyped {
                 // Cannot convert X operand back to untyped
                 return nil
             }
@@ -486,7 +486,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         }
         
         func transition(_ s0: CalcState ) -> CalcState? {
-            guard s0.Xt.uid == .untyped else {
+            guard s0.Xt.uid == uidUntyped else {
                 // X operand must be an untyped value
                 return nil
             }

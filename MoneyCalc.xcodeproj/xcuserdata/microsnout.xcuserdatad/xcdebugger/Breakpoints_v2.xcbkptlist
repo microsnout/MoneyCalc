@@ -174,8 +174,8 @@
             filePath = "MoneyCalc/units.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "677"
-            endingLineNumber = "677"
+            startingLineNumber = "693"
+            endingLineNumber = "693"
             landmarkName = "lookupTypeTag(_:)"
             landmarkType = "9">
          </BreakpointContent>

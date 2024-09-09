@@ -587,9 +587,9 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                     s1.X = s0.Y * s0.X
                     s1.Xt = s0.Yt
                 }
-                else if let tc = typeProduct(s0.Yt, s0.Xt) {
+                else if let (tc, ratio) = typeProduct(s0.Yt, s0.Xt) {
                     if let tag = lookupTypeTag(tc) {
-                        s1.X = s0.Y * s0.X
+                        s1.X = s0.Y * s0.X * ratio
                         s1.Xt = tag
                     }
                     else {
@@ -618,9 +618,9 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                     s1.X = s0.Y / s0.X
                     s1.Xt = s0.Yt
                 }
-                else if let tc = typeProduct(s0.Yt, s0.Xt, quotient: true) {
+                else if let (tc, ratio) = typeProduct(s0.Yt, s0.Xt, quotient: true) {
                     if let tag = lookupTypeTag(tc) {
-                        s1.X = s0.Y / s0.X
+                        s1.X = s0.Y / s0.X * ratio
                         s1.Xt = tag
                     }
                     else {

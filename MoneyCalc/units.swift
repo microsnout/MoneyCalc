@@ -624,7 +624,7 @@ func unitConvert( from: TypeTag, to: TypeTag ) -> ConversionSeq? {
 }
 
 
-func typeProduct( _ tagA: TypeTag, _ tagB: TypeTag, quotient: Bool = false ) -> TypeCode? {
+func typeProduct( _ tagA: TypeTag, _ tagB: TypeTag, quotient: Bool = false ) -> (TypeCode, Double)? {
     /// typeProduct( )
     /// Produce type code of product A*B or quotient A/B
     ///
@@ -639,6 +639,8 @@ func typeProduct( _ tagA: TypeTag, _ tagB: TypeTag, quotient: Bool = false ) -> 
         
         let sign: Int = quotient ? -1 : 1
         
+        var ratio: Double = 1.0
+        
         for (ttA, expA) in tcA {
             if let x = tcB.firstIndex( where: { (ttB, expB) in ttB == ttA } ) {
                 let (_, expB) = tcB[x]
@@ -647,6 +649,20 @@ func typeProduct( _ tagA: TypeTag, _ tagB: TypeTag, quotient: Bool = false ) -> 
                     tcQ.append( (ttA, exp) )
                 }
                 tcB.remove(at: x)
+            }
+            else if let y = tcB.firstIndex ( where: { (ttB, expB) in ttB.uid == ttA.uid } ) {
+                // A and B are compatible types like cm and km
+                let (ttB, expB) = tcB.remove(at: y)
+                
+                if let defA = TypeDef.typeDict[ttA],
+                   let defB = TypeDef.typeDict[ttB]
+                {
+                    let exp = expA + sign*expB
+                    if exp != 0 {
+                        tcQ.append( (ttA, exp) )
+                    }
+                    ratio *= sign == 1 ? defA.ratio/defB.ratio : defB.ratio/defA.ratio
+                }
             }
             else {
                 tcQ.append( (ttA, expA) )
@@ -659,7 +675,7 @@ func typeProduct( _ tagA: TypeTag, _ tagB: TypeTag, quotient: Bool = false ) -> 
         }
         
         normalizeTypeCode(&tcQ)
-        return tcQ
+        return (tcQ, ratio)
         
     }
     return  nil

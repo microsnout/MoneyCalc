@@ -557,7 +557,6 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     let opTable: [KeyCode : StateOperator] = [
         .plus:  BinaryOpAdditive( + ),
         .minus: BinaryOpAdditive( - ),
-        .times: BinaryOpMultiplicative( * ),
         
         // Square root, inverse, x squared, y to the x
         .sqrt:  UnaryOp( sqrt ),
@@ -572,6 +571,37 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         
         .log:   UnaryOp( result: tagUntyped, log10 ),
         .ln:    UnaryOp( result: tagUntyped, log ),
+
+        .times:
+            CustomOp { s0 in
+                var s1 = s0
+                s1.stackDrop()
+                
+                if s0.Yt.isType(.untyped) {
+                    // Scaling typed value by an untyped
+                    s1.X = s0.Y * s0.X
+                    s1.Xt = s0.Xt
+                }
+                else if s0.Xt.isType(.untyped) {
+                    // Scaling typed value by an untyped
+                    s1.X = s0.Y * s0.X
+                    s1.Xt = s0.Yt
+                }
+                else if let tc = typeProduct(s0.Yt, s0.Xt) {
+                    if let tag = lookupTypeTag(tc) {
+                        s1.X = s0.Y * s0.X
+                        s1.Xt = tag
+                    }
+                    else {
+                        return nil
+                    }
+                }
+                else {
+                    // Cannot multiply these types
+                    return nil
+                }
+                return s1
+            },
 
         .divide:
             CustomOp { s0 in

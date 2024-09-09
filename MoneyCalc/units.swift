@@ -114,7 +114,7 @@ func toUnitCode( from: UnitSignature ) -> UnitCode {
     }
     
     if !nstr.isEmpty {
-        let nFactors = nstr.split( separator: "*")
+        let nFactors = nstr.split( separator: "·")
         
         for nf in nFactors {
             let bits = nf.split( separator: "^")
@@ -157,7 +157,7 @@ func toTypeCode( from: TypeSignature ) -> TypeCode {
     }
     
     if !nstr.isEmpty {
-        let nFactors = nstr.split( separator: "*")
+        let nFactors = nstr.split( separator: "·")
         
         for nf in nFactors {
             let bits = nf.split( separator: "^")
@@ -355,8 +355,6 @@ class TypeDef {
 
         defineType( .temp,     "C",    1.0)
         defineType( .temp,     "F",    9.0/5.0, delta: 32)
-
-        defineSigType( .velocity, "m/sec")
         
         #if DEBUG
         // UnitDef
@@ -423,6 +421,9 @@ func getUnitSig( _ uc: UnitCode ) -> UnitSignature {
     ///
     /// UnitCode -> UnitSignature
     ///
+    if uc.isEmpty {
+        return ""
+    }
     let (_, exp0) = uc[0]
     var ss = exp0 < 0 ? "1/" : ""
     var negSeen: Bool = false
@@ -440,7 +441,7 @@ func getUnitSig( _ uc: UnitCode ) -> UnitSignature {
             }
         }
         
-        ss.append( String( describing: uid) )
+        ss.append( uid2Str(uid) )
         
         if abs(exp) > 1 {
             ss.append( "^\(abs(exp))" )
@@ -455,6 +456,9 @@ func getTypeSig( _ tc: TypeCode ) -> TypeSignature {
     ///
     ///  TypeCode -> TypeSignature
     ///
+    if tc.isEmpty {
+        return ""
+    }
     let (_, exp0) = tc[0]
     var ss = exp0 < 0 ? "1/" : ""
     var negSeen: Bool = false
@@ -605,7 +609,10 @@ func typeProduct( _ tagA: TypeTag, _ tagB: TypeTag, quotient: Bool = false ) -> 
         for (ttA, expA) in tcA {
             if let x = tcB.firstIndex( where: { (ttB, expB) in ttB == ttA } ) {
                 let (_, expB) = tcB[x]
-                tcQ.append( (ttA, expA + sign*expB) )
+                let exp = expA + sign*expB
+                if exp != 0 {
+                    tcQ.append( (ttA, exp) )
+                }
                 tcB.remove(at: x)
             }
             else {
@@ -646,8 +653,7 @@ func lookupTypeTag( _ tc: TypeCode ) -> TypeTag? {
         }
         else {
             TypeDef.defineUnit(.user, usig)
-            
-            TypeDef.defineType(.user, tsig, 1.0)
+            TypeDef.defineSigType(.user, tsig)
             
             if let tag = TypeDef.sigDict[tsig] {
                 return tag

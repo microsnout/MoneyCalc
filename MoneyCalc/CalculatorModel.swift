@@ -479,25 +479,48 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     }
     
     class BinaryOpMultiplicative: StateOperator {
-        let function: (Double, Double) -> Double
+        let kc: KeyCode
         
-        init(_ function: @escaping (Double, Double) -> Double ) {
-            self.function = function
+        init( _ key: KeyCode ) {
+            self.kc = key
+        }
+        
+        func _op( _ x: Double, _ y: Double ) -> Double {
+            return kc == .times ? x*y : x/y
         }
         
         func transition(_ s0: CalcState ) -> CalcState? {
-            guard s0.Xt.uid == uidUntyped else {
-                // X operand must be an untyped value
+            var s1 = s0
+            s1.stackDrop()
+            
+            if s0.Yt.isType(.untyped) {
+                // Scaling typed value by an untyped
+                s1.X = _op( s0.Y, s0.X )
+                s1.Xt = s0.Xt
+            }
+            else if s0.Xt.isType(.untyped) {
+                // Scaling typed value by an untyped
+                s1.X = _op( s0.Y, s0.X )
+                s1.Xt = s0.Yt
+            }
+            else if let (tc, ratio) = typeProduct(s0.Yt, s0.Xt, quotient: kc == .divide ) {
+                if let tag = lookupTypeTag(tc) {
+                    s1.X = _op(s0.Y, s0.X) * ratio
+                    s1.Xt = tag
+                }
+                else {
+                    return nil
+                }
+            }
+            else {
+                // Cannot multiply these types
                 return nil
             }
             
-            // Result will be same type as Y
-            var s1 = s0
-            s1.stackDrop()
-            s1.X = function( s0.Y, s0.X )
             return s1
         }
     }
+    
     
     class CustomOp: StateOperator {
         let block: (CalcState) -> CalcState?
@@ -557,7 +580,9 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     let opTable: [KeyCode : StateOperator] = [
         .plus:  BinaryOpAdditive( + ),
         .minus: BinaryOpAdditive( - ),
-        
+        .times: BinaryOpMultiplicative( .times ),
+        .divide: BinaryOpMultiplicative( .divide ),
+
         // Square root, inverse, x squared, y to the x
         .sqrt:  UnaryOp( sqrt ),
         .inv:   UnaryOp( { (x: Double) -> Double in return 1.0/x } ),
@@ -571,68 +596,6 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         
         .log:   UnaryOp( result: tagUntyped, log10 ),
         .ln:    UnaryOp( result: tagUntyped, log ),
-
-        .times:
-            CustomOp { s0 in
-                var s1 = s0
-                s1.stackDrop()
-                
-                if s0.Yt.isType(.untyped) {
-                    // Scaling typed value by an untyped
-                    s1.X = s0.Y * s0.X
-                    s1.Xt = s0.Xt
-                }
-                else if s0.Xt.isType(.untyped) {
-                    // Scaling typed value by an untyped
-                    s1.X = s0.Y * s0.X
-                    s1.Xt = s0.Yt
-                }
-                else if let (tc, ratio) = typeProduct(s0.Yt, s0.Xt) {
-                    if let tag = lookupTypeTag(tc) {
-                        s1.X = s0.Y * s0.X * ratio
-                        s1.Xt = tag
-                    }
-                    else {
-                        return nil
-                    }
-                }
-                else {
-                    // Cannot multiply these types
-                    return nil
-                }
-                return s1
-            },
-
-        .divide:
-            CustomOp { s0 in
-                var s1 = s0
-                s1.stackDrop()
-                
-                if s0.Yt == s0.Xt {
-                    // Identical types produces untyped result
-                    s1.X = s0.Y / s0.X
-                    s1.Xt = tagUntyped
-                }
-                else if s0.Xt.isType(.untyped) {
-                    // Scaling typed value by an untyped
-                    s1.X = s0.Y / s0.X
-                    s1.Xt = s0.Yt
-                }
-                else if let (tc, ratio) = typeProduct(s0.Yt, s0.Xt, quotient: true) {
-                    if let tag = lookupTypeTag(tc) {
-                        s1.X = s0.Y / s0.X * ratio
-                        s1.Xt = tag
-                    }
-                    else {
-                        return nil
-                    }
-                }
-                else {
-                    // Cannot divide these types
-                    return nil
-                }
-                return s1
-            },
         
         .enter:
             // Push stack up, x becomes entry value

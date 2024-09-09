@@ -6,19 +6,27 @@
 //
 
 import Foundation
+import OSLog
 
+let logU = Logger(subsystem: "com.microsnout.calculator", category: "units")
+
+// Standard predefined unit types, .user indicates dynamically defined new type
+// UnitId value is Int equal to rawValue but can exceed .user
+//
 enum StdUnitId: Int {
     case none = 0, untyped, angle, length, area, volume, velocity, acceleration, time
     case mass, weight, pressure, capacity, temp
     case user = 1000
 }
 
+// Starting value for UnitIds of type .user
 let userIdBase:Int = 1000
 
 typealias UnitId = Int
 typealias TypeId = Int
 
 
+// Common UnitId values as Int
 let uidNone = StdUnitId.none.rawValue
 let uidUntyped = StdUnitId.untyped.rawValue
 let uidUser = StdUnitId.user.rawValue
@@ -33,6 +41,7 @@ struct TypeTag: Hashable {
     }
     
     func isType( _ uid: StdUnitId ) -> Bool {
+        /// This func can determine if a tag is a specific predefined type or a user type but not which user type
         if uid == .user && self.uid >= userIdBase {
             return true
         }
@@ -45,9 +54,11 @@ struct TypeTag: Hashable {
             return def.symbol
         }
         else if uid == uidUntyped {
+            // Untyped numbers have no symbol
             return nil
         }
         else {
+            // Unknown type
             return self.description
         }
     }
@@ -63,13 +74,6 @@ struct TypeTag: Hashable {
     }
 }
 
-func uid2Str( _ uid: UnitId ) -> String {
-    if uid >= userIdBase {
-        return "User\(uid - userIdBase)"
-    }
-    return "\(StdUnitId( rawValue: uid) ?? .none)"
-}
-
 extension TypeTag: CustomStringConvertible {
     var description: String {
         if self.isType(.user) {
@@ -79,6 +83,18 @@ extension TypeTag: CustomStringConvertible {
     }
 }
 
+func uid2Str( _ uid: UnitId ) -> String {
+    if uid >= userIdBase {
+        return "User\(uid - userIdBase)"
+    }
+    return "\(StdUnitId( rawValue: uid) ?? .none)"
+}
+
+extension String {
+    init( uid: UnitId ) {
+        self.init( uid2Str(uid))
+    }
+}
 
 typealias UnitCode = [(UnitId, Int)]
 typealias TypeCode = [(TypeTag, Int)]
@@ -93,18 +109,22 @@ func toUnitCode( from: UnitSignature ) -> UnitCode {
     ///
     var uc: UnitCode = []
     
-    if ( from.isEmpty ) {
+    if ( from.isEmpty || from == "1" ) {
         return uc
     }
     
+    // Positive Negative exponent parts
     let pn = from.split( separator: "/")
     
+    // if count is 2 there is a list of negative exponent factors or denomenator units 'm/s' -> 'm', 's'
     let pstr = pn[0]
     let nstr = pn.count > 1 ? pn[1] : ""
     
+    // Multipication symbol separated factors 'N·m'
     let pFactors = pstr.split( separator: "·")
     
     for pf in pFactors {
+        // Exponent symbol is present if exp is not 1
         let bits = pf.split( separator: "^")
        
         if let unit = UnitDef.symDict[ String(bits[0]) ] {
@@ -114,14 +134,19 @@ func toUnitCode( from: UnitSignature ) -> UnitCode {
     }
     
     if !nstr.isEmpty {
+        // Same process for factors after the / except all exponents are negated
         let nFactors = nstr.split( separator: "·")
         
         for nf in nFactors {
             let bits = nf.split( separator: "^")
+            let sym = String(bits[0])
             
-            if let unit = UnitDef.symDict[ String(bits[0]) ] {
+            if let unit = UnitDef.symDict[sym] {
                 let exp: Int = bits.count > 1 ? Int(bits[1])! : 1
                 uc.append( (unit.uid, -exp) )
+            }
+            else {
+                logU.error( "Undefined unit symbol: \(sym) in signature: \(from)" )
             }
         }
     }
@@ -161,10 +186,14 @@ func toTypeCode( from: TypeSignature ) -> TypeCode {
         
         for nf in nFactors {
             let bits = nf.split( separator: "^")
+            let sym = String(bits[0]) 
             
-            if let tag = TypeDef.symDict[ String(bits[0]) ] {
+            if let tag = TypeDef.symDict[sym] {
                 let exp: Int = bits.count > 1 ? Int(bits[1])! : 1
                 tc.append( (tag, -exp) )
+            }
+            else {
+                logU.error( "Undefined unit symbol: \(sym) in signature: \(from)" )
             }
         }
     }
@@ -175,51 +204,78 @@ func toTypeCode( from: TypeSignature ) -> TypeCode {
 
 class UnitDef {
     var uid:    UnitId
+    var sym:    String?
     var uc:     UnitCode
-    var sym:    String
     
     static var uidNext: UnitId = userIdBase
     
     static func getUserUnitId() -> UnitId {
+        // Allocate new UnitId for type .user
         let uid = UnitDef.uidNext
         UnitDef.uidNext += 1
         return uid
     }
     
-    init( _ uid: UnitId, _ us: UnitSignature?, _ sym: String? ) {
-        self.uid = uid
+    init( _ uid: StdUnitId, sym: String ) {
+        if uid == .user {
+            logU.error("Cannot define .user UnitDef without signature")
+        }
+        self.uid = uid.rawValue
+        self.sym = sym
+        self.uc = [(self.uid, 1)]
         
-        if let str = sym {
-            self.sym = str
-        }
-        else {
-            self.sym = uid2Str(uid)
-        }
+        // All predefined Units have a symbol, .user symbols usaully don't
+        UnitDef.symDict[sym] = self
+    }
+
+    init( _ uid: StdUnitId, _ us: UnitSignature, _ sym: String? = nil ) {
+        self.uid = uid.rawValue
+        self.sym = sym
+        self.uc = toUnitCode( from: us )
         
-        if let usig = us {
-            self.uc = toUnitCode( from: usig )
+        UnitDef.unitDict[self.uid] = self
+        UnitDef.sigDict[us] = self
+        if let symbol = sym {
+            UnitDef.symDict[symbol] = self
         }
-        else {
-            self.uc = [(uid, 1)]
-        }
-        
-        UnitDef.symDict[self.sym] = self
     }
     
     static var unitDict: [UnitId : UnitDef] = [:]
     static var symDict:  [String : UnitDef] = [:]
     static var sigDict:  [UnitSignature : UnitDef] = [:]
+
+    static func defineUnit( _ uid: StdUnitId ) {
+        let sym = String( describing: uid )
+        let def = UnitDef( uid, sym: sym)
+        
+       // Add to index by uid and sym
+        UnitDef.unitDict[uid.rawValue] = def
+        UnitDef.symDict[sym] = def
+    }
+
+    static func defineUnit( _ uid: StdUnitId, _ usig: UnitSignature ) {
+        let sym = String( describing: uid )
+        let def = UnitDef( uid, usig, sym)
+        
+       // Add to index by uid and sym
+        UnitDef.sigDict[usig] = def
+        UnitDef.unitDict[uid.rawValue] = def
+        UnitDef.symDict[sym] = def
+    }
+    
+    static func defineSigUnit( _ usig: UnitSignature ) {
+        let def = UnitDef(.user, usig)
+        UnitDef.sigDict[usig] = def
+    }
 }
 
 #if DEBUG
 extension UnitDef: CustomStringConvertible {
     var description: String {
-        return "<\(sym):[\(getUnitSig(uc))]>"
+        return "<\(uid2Str(self.uid)):\(String( describing: sym)):'\(getUnitSig(uc))'>"
     }
 }
 #endif
-
-
 
 
 class TypeDef {
@@ -233,13 +289,14 @@ class TypeDef {
     static var tidNext: TypeId = 0
     
     static func getNewTid() -> TypeId {
+        // Allocate next type id
         let tid = TypeDef.tidNext
         tidNext += 1
         return tid
     }
     
-    init( _ uid: UnitId, sym: String, _ ratio: Double, delta: Double = 0.0 ) {
-        self.uid = uid
+    init( _ uid: StdUnitId, sym: String, _ ratio: Double, delta: Double = 0.0 ) {
+        self.uid = uid.rawValue
         self.tid = TypeDef.getNewTid()
         self.sym = sym
         self.ratio = ratio
@@ -267,67 +324,43 @@ class TypeDef {
     static var typeDict: [TypeTag : TypeDef] = [:]
     static var symDict:  [String : TypeTag] = [:]
     static var sigDict:  [TypeSignature : TypeTag] = [:]
-
-    static func defineUnit( _ uid: StdUnitId, _ usig: UnitSignature? = nil, _ name: String? = nil ) {
-        let def = UnitDef( uid.rawValue, usig, name)
-        
-        UnitDef.unitDict[uid.rawValue] = def
-        
-        if let sig = usig {
-            UnitDef.sigDict[sig] = def
-        }
-    }
     
     static func defineType( _ uid: StdUnitId, _ sym: String, _ ratio: Double, delta: Double = 0.0 ) {
-        
         if let unit = UnitDef.unitDict[uid.rawValue] {
-            let def = TypeDef(uid.rawValue, sym: sym, ratio, delta: delta)
-            def.tc = [(TypeTag(uid, def.tid), 1)]
+            let def = TypeDef(uid, sym: sym, ratio, delta: delta)
             
             let tag = TypeTag(uid, def.tid)
             TypeDef.typeDict[tag] = def
             TypeDef.symDict[sym] = tag
         }
         else {
-            let def = TypeDef(uid.rawValue, sym: sym, ratio, delta: delta)
-
-            let tag = TypeTag(uid, def.tid)
-            TypeDef.typeDict[tag] = def
-            TypeDef.symDict[sym] = tag
+            logU.error("Cannot define type \(sym). UnitDef for uid \(uid2Str(uid.rawValue))")
         }
         
     }
     
     
-    static func defineSigType( _ uid: StdUnitId, _ tsig: TypeSignature ) {
-        let def = TypeDef(uid.rawValue, tsig: tsig)
-        let tag = TypeTag(uid, def.tid)
-        TypeDef.typeDict[tag] = def
-        TypeDef.sigDict[tsig] = tag
-    }
-    
-
-    static func defineNewSigType( _ uid: UnitId, _ tsig: TypeSignature ) {
-        let def = TypeDef(uid, tsig: tsig)
-        let tag = TypeTag(uid, def.tid)
+    static func defineSigType( _ tsig: TypeSignature ) {
+        let def = TypeDef(uidUser, tsig: tsig)
+        let tag = TypeTag(def.uid, def.tid)
         TypeDef.typeDict[tag] = def
         TypeDef.sigDict[tsig] = tag
     }
     
     
     static func buildUnitData() {
-        defineUnit( .time )
-        defineUnit( .mass )
-        defineUnit( .temp )
-        defineUnit( .angle )
-        defineUnit( .length )
-        defineUnit( .weight )
-        defineUnit( .capacity )
-        defineUnit( .area, "length^2" )
-        defineUnit( .volume, "length^3" )
-        defineUnit( .velocity, "length/time" )
-        defineUnit( .acceleration, "length/time^2" )
-        defineUnit( .pressure, "weight/length^2" )
+        UnitDef.defineUnit( .time )
+        UnitDef.defineUnit( .mass )
+        UnitDef.defineUnit( .temp )
+        UnitDef.defineUnit( .angle )
+        UnitDef.defineUnit( .length )
+        UnitDef.defineUnit( .weight )
+        UnitDef.defineUnit( .capacity )
+        UnitDef.defineUnit( .area, "length^2" )
+        UnitDef.defineUnit( .volume, "length^3" )
+        UnitDef.defineUnit( .velocity, "length/time" )
+        UnitDef.defineUnit( .acceleration, "length/time^2" )
+        UnitDef.defineUnit( .pressure, "weight/length^2" )
         
         defineType( .length,   "m",    1)
         defineType( .length,   "mm",   1000)
@@ -645,15 +678,15 @@ func lookupTypeTag( _ tc: TypeCode ) -> TypeTag? {
         
         if let unit = UnitDef.sigDict[usig] {
             
-            TypeDef.defineNewSigType(unit.uid, tsig)
+            TypeDef.defineSigType(tsig)
             
             if let tag = TypeDef.sigDict[tsig] {
                 return tag
             }
         }
         else {
-            TypeDef.defineUnit(.user, usig)
-            TypeDef.defineSigType(.user, tsig)
+            UnitDef.defineSigUnit(usig)
+            TypeDef.defineSigType(tsig)
             
             if let tag = TypeDef.sigDict[tsig] {
                 return tag

@@ -155,6 +155,42 @@ func toUnitCode( from: UnitSignature ) -> UnitCode {
 }
 
 
+func getUnitSig( _ uc: UnitCode ) -> UnitSignature {
+    ///
+    /// UnitCode -> UnitSignature
+    ///     [(length, 1),(time,-2)] -> "length/time^2"
+    ///
+    if uc.isEmpty {
+        return ""
+    }
+    let (_, exp0) = uc[0]
+    var ss = exp0 < 0 ? "1/" : ""
+    var negSeen: Bool = false
+    var fn = 0
+
+    for (uid, exp) in uc {
+        
+        if fn > 0 {
+            if exp < 0 && !negSeen {
+                ss.append("/")
+                negSeen = true
+            }
+            else {
+                ss.append( "·" )
+            }
+        }
+        
+        ss.append( uid2Str(uid) )
+        
+        if abs(exp) > 1 {
+            ss.append( "^\(abs(exp))" )
+        }
+        fn += 1
+    }
+    return ss
+}
+
+
 func toTypeCode( from: TypeSignature ) -> TypeCode {
     ///
     ///  TypeSignature -> TypeCode
@@ -202,6 +238,57 @@ func toTypeCode( from: TypeSignature ) -> TypeCode {
 }
 
 
+func getTypeSig( _ tc: TypeCode ) -> TypeSignature {
+    ///
+    ///  TypeCode -> TypeSignature
+    ///
+    if tc.isEmpty {
+        return ""
+    }
+    let (_, exp0) = tc[0]
+    var ss = exp0 < 0 ? "1/" : ""
+    var negSeen: Bool = false
+    var fn = 0
+
+    for (tt, exp) in tc {
+        
+        if fn > 0 {
+            if exp < 0 && !negSeen {
+                ss.append("/")
+                negSeen = true
+            }
+            else {
+                ss.append( "·" )
+            }
+        }
+        
+        if let def = TypeDef.typeDict[tt],
+           let sym = def.sym
+        {
+            ss.append( sym )
+        }
+        else {
+            ss.append( "\(tt.description)" )
+        }
+        
+        if abs(exp) > 1 {
+            ss.append( "^\(abs(exp))" )
+        }
+        fn += 1
+    }
+    return ss
+}
+
+
+func toUnitCode( from: TypeCode ) -> UnitCode {
+    ///
+    /// TypeCode -> UnitCode
+    ///     Reduce (km, 1) to (length, 1),   (sec, -2) to (time, -2)
+    ///
+    return from.map( { (tag, exp) in (tag.uid, exp) } )
+}
+
+
 class UnitDef {
     var uid:    UnitId
     var sym:    String?
@@ -216,56 +303,54 @@ class UnitDef {
         return uid
     }
     
-    init( _ uid: StdUnitId, sym: String ) {
+    init( _ uid: StdUnitId, sym: String, usig: UnitSignature? = nil ) {
         if uid == .user {
+            // For defining unit definitions for standard predefined units only, not .user
             logU.error("Cannot define .user UnitDef without signature")
         }
+        
         self.uid = uid.rawValue
         self.sym = sym
-        self.uc = [(self.uid, 1)]
         
-        // All predefined Units have a symbol, .user symbols usaully don't
-        UnitDef.symDict[sym] = self
-    }
-
-    init( _ uid: StdUnitId, _ us: UnitSignature, _ sym: String? = nil ) {
-        self.uid = uid.rawValue
-        self.sym = sym
-        self.uc = toUnitCode( from: us )
-        
-        UnitDef.unitDict[self.uid] = self
-        UnitDef.sigDict[us] = self
-        if let symbol = sym {
-            UnitDef.symDict[symbol] = self
+        if let sig = usig {
+            self.uc = toUnitCode(from: sig)
         }
+        else {
+            self.uc = [(self.uid, 1)]
+        }
+    }
+    
+    init( _ usig: UnitSignature, sym: String? = nil ) {
+        // Allocate new UnitId starting at .user, sym is optional, UnitCode produced from signature
+        self.uid = UnitDef.getUserUnitId()
+        self.sym = sym
+        self.uc = toUnitCode( from: usig )
     }
     
     static var unitDict: [UnitId : UnitDef] = [:]
     static var symDict:  [String : UnitDef] = [:]
     static var sigDict:  [UnitSignature : UnitDef] = [:]
 
-    static func defineUnit( _ uid: StdUnitId ) {
+    static func defineUnit( _ uid: StdUnitId, _ usig: UnitSignature? = nil ) {
         let sym = String( describing: uid )
-        let def = UnitDef( uid, sym: sym)
-        
-       // Add to index by uid and sym
+        let def = UnitDef( uid, sym: sym, usig: usig)
+
+       // Add def to index by UnitId, Symbol and UnitSignature
         UnitDef.unitDict[uid.rawValue] = def
         UnitDef.symDict[sym] = def
+        UnitDef.sigDict[ getUnitSig(def.uc)] = def
     }
 
-    static func defineUnit( _ uid: StdUnitId, _ usig: UnitSignature ) {
-        let sym = String( describing: uid )
-        let def = UnitDef( uid, usig, sym)
+    static func defineUserUnit( _ usig: UnitSignature, sym: String? = nil ) -> UnitDef {
+        let def = UnitDef(usig, sym: sym)
         
-       // Add to index by uid and sym
+        // Add def to index by UnitId, UnitSignature and Symbol if there is one
+        UnitDef.unitDict[def.uid] = def
         UnitDef.sigDict[usig] = def
-        UnitDef.unitDict[uid.rawValue] = def
-        UnitDef.symDict[sym] = def
-    }
-    
-    static func defineSigUnit( _ usig: UnitSignature ) {
-        let def = UnitDef(.user, usig)
-        UnitDef.sigDict[usig] = def
+        if let symbol = sym {
+            UnitDef.symDict[symbol] = def
+        }
+        return def
     }
 }
 
@@ -339,9 +424,8 @@ class TypeDef {
         
     }
     
-    
-    static func defineSigType( _ tsig: TypeSignature ) {
-        let def = TypeDef(uidUser, tsig: tsig)
+    static func defineSigType( _ uid: UnitId, _ tsig: TypeSignature ) {
+        let def = TypeDef(uid, tsig: tsig)
         let tag = TypeTag(def.uid, def.tid)
         TypeDef.typeDict[tag] = def
         TypeDef.sigDict[tsig] = tag
@@ -447,91 +531,6 @@ func normalizeTypeCode( _ tc: inout TypeCode ) {
         
         return xTT.uid < yTT.uid
     }
-}
-
-
-func getUnitSig( _ uc: UnitCode ) -> UnitSignature {
-    ///
-    /// UnitCode -> UnitSignature
-    ///
-    if uc.isEmpty {
-        return ""
-    }
-    let (_, exp0) = uc[0]
-    var ss = exp0 < 0 ? "1/" : ""
-    var negSeen: Bool = false
-    var fn = 0
-
-    for (uid, exp) in uc {
-        
-        if fn > 0 {
-            if exp < 0 && !negSeen {
-                ss.append("/")
-                negSeen = true
-            }
-            else {
-                ss.append( "·" )
-            }
-        }
-        
-        ss.append( uid2Str(uid) )
-        
-        if abs(exp) > 1 {
-            ss.append( "^\(abs(exp))" )
-        }
-        fn += 1
-    }
-    return ss
-}
-
-
-func getTypeSig( _ tc: TypeCode ) -> TypeSignature {
-    ///
-    ///  TypeCode -> TypeSignature
-    ///
-    if tc.isEmpty {
-        return ""
-    }
-    let (_, exp0) = tc[0]
-    var ss = exp0 < 0 ? "1/" : ""
-    var negSeen: Bool = false
-    var fn = 0
-
-    for (tt, exp) in tc {
-        
-        if fn > 0 {
-            if exp < 0 && !negSeen {
-                ss.append("/")
-                negSeen = true
-            }
-            else {
-                ss.append( "·" )
-            }
-        }
-        
-        if let def = TypeDef.typeDict[tt],
-           let sym = def.sym
-        {
-            ss.append( sym )
-        }
-        else {
-            ss.append( "\(tt.description)" )
-        }
-        
-        if abs(exp) > 1 {
-            ss.append( "^\(abs(exp))" )
-        }
-        fn += 1
-    }
-    return ss
-}
-
-
-func toUnitCode( from: TypeCode ) -> UnitCode {
-    ///
-    /// TypeCode -> UnitCode
-    ///
-    return from.map( { (tag, exp) in (tag.uid, exp) } )
 }
 
 
@@ -641,8 +640,10 @@ func typeProduct( _ tagA: TypeTag, _ tagB: TypeTag, quotient: Bool = false ) -> 
         
         var ratio: Double = 1.0
         
+        // For each unit factor in A
         for (ttA, expA) in tcA {
             if let x = tcB.firstIndex( where: { (ttB, expB) in ttB == ttA } ) {
+                // There is a matching unit in B, combine the exponents and add to result if exp is nonzero
                 let (_, expB) = tcB[x]
                 let exp = expA + sign*expB
                 if exp != 0 {
@@ -657,6 +658,7 @@ func typeProduct( _ tagA: TypeTag, _ tagB: TypeTag, quotient: Bool = false ) -> 
                 if let defA = TypeDef.typeDict[ttA],
                    let defB = TypeDef.typeDict[ttB]
                 {
+                    // Compute the ratio of the compatible types cm/km, add to result is nonzero exp
                     let exp = expA + sign*expB
                     if exp != 0 {
                         tcQ.append( (ttA, exp) )
@@ -665,11 +667,12 @@ func typeProduct( _ tagA: TypeTag, _ tagB: TypeTag, quotient: Bool = false ) -> 
                 }
             }
             else {
+                // Unit ttA does not appear in B, keep it in the result
                 tcQ.append( (ttA, expA) )
             }
         }
         
-        // Append remaining elements of B
+        // Append remaining elements of B that did not appear in A
         for (tagB, expB) in tcB {
             tcQ.append( (tagB, sign*expB) )
         }
@@ -683,33 +686,32 @@ func typeProduct( _ tagA: TypeTag, _ tagB: TypeTag, quotient: Bool = false ) -> 
 
 
 func lookupTypeTag( _ tc: TypeCode ) -> TypeTag? {
+    /// lookupTypeTag( TypeCode ) -> TypeTag
+    /// Find a type tag for the provided type code sequence
+    ///
     let tsig = getTypeSig(tc)
     
     if let tag = TypeDef.sigDict[tsig] {
+        // Matching tag is already defined
         return tag
     }
     else {
+        // Find the unit signature from type code, 
+        // [(km,1),(sec,-1)] -> [(length,1),(time,-1)] -> "length/time"
+        //
         let uc = toUnitCode( from: tc )
         let usig = getUnitSig(uc)
         
         if let unit = UnitDef.sigDict[usig] {
-            
-            TypeDef.defineSigType(tsig)
-            
-            if let tag = TypeDef.sigDict[tsig] {
-                return tag
-            }
+            // Unit def already exists, add type def
+            TypeDef.defineSigType(unit.uid, tsig)
         }
         else {
-            UnitDef.defineSigUnit(usig)
-            TypeDef.defineSigType(tsig)
-            
-            if let tag = TypeDef.sigDict[tsig] {
-                return tag
-            }
+            let unit = UnitDef.defineUserUnit(usig)
+            TypeDef.defineSigType(unit.uid, tsig)
         }
         
-        return nil
+        return TypeDef.sigDict[tsig]
     }
 }
 

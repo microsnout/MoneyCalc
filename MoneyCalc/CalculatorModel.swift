@@ -494,7 +494,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             s1.stackDrop()
             
             if s0.Yt.isType(.untyped) {
-                // Scaling typed value by an untyped
+                // Scaling typed value by an untyped - tag unchanged
                 s1.X = _op( s0.Y, s0.X )
                 s1.Xt = s0.Xt
             }
@@ -503,18 +503,18 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                 s1.X = _op( s0.Y, s0.X )
                 s1.Xt = s0.Yt
             }
-            else if let (tc, ratio) = typeProduct(s0.Yt, s0.Xt, quotient: kc == .divide ) {
-                if let tag = lookupTypeTag(tc) {
+            else {
+                if let (tc, ratio) = typeProduct(s0.Yt, s0.Xt, quotient: kc == .divide ),
+                   let tag = lookupTypeTag(tc)
+                {
+                    // Successfully produced new type tag
                     s1.X = _op(s0.Y, s0.X) * ratio
                     s1.Xt = tag
                 }
                 else {
+                    // Cannot multiply these types
                     return nil
                 }
-            }
-            else {
-                // Cannot multiply these types
-                return nil
             }
             
             return s1

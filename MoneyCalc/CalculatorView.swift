@@ -29,7 +29,7 @@ struct CalculatorView: View {
     @StateObject  var model = CalculatorModel()
     
     let keySpec = KeySpec(
-        width: 50, height: 40,
+        width: 43, height: 40,
         radius: 10, spacing: 10,
         buttonColor: Color("KeyColor"), textColor: Color("KeyText"))
     
@@ -66,7 +66,7 @@ struct CalculatorView: View {
     // **************************
     
     let skSpec = KeySpec(
-        width: 50, height: 30,
+        width: 43, height: 30,
         radius: 10, spacing: 10,
         buttonColor: Color("KeyColor"), textColor: Color("KeyText"))
     
@@ -127,45 +127,43 @@ struct CalculatorView: View {
             VStack
             {
                 MemoryDisplay( model: model, leadingOps: swipeLeadingOpTable )
-                ZStack {
-                    VStack(alignment: .center) {
-                        // App name and drag handle
-                        HStack {
-                            Text("HP 33").foregroundColor(.black)/*@START_MENU_TOKEN@*/.bold/*@END_MENU_TOKEN@*/().italic()
-                            Spacer()
-                            Image("drag-vertical")
-                                .resizable().scaledToFit().border(.gray)
-                                .gesture( dragBoundry )
-                        }
-                        .frame( height: 25 )
-                        
-                        // Main calculator display
-                        Display( model: model )
-                        
-                        SoftKeyRow( keySpec: skSpec, rowSpec: unitRowSpec, keyPressHandler: model )
-                            .padding( .vertical, 5 )
-                        
-                        SoftKeyRow( keySpec: skSpec, rowSpec: fn0RowSpec, keyPressHandler: model )
-                            .padding( .vertical, 5 )
-
-                        Divider()
-                        
-                        // Standard keypads
-                        VStack( alignment: .leading) {
-                            HStack {
-                                Keypad( keySpec: keySpec, padSpec: numPad, keyPressHandler: model )
-                                Keypad( keySpec: keySpec, padSpec: opPad, keyPressHandler: model )
-                            }
-                            HStack {
-                                Keypad( keySpec: keySpec, padSpec: enterPad, keyPressHandler: model)
-                                Keypad( keySpec: keySpec, padSpec: clearPad, keyPressHandler: model)
-                            }
-                        }.alignmentGuide(.leading, computeValue: {_ in 0})
+                VStack(alignment: .center) {
+                    // App name and drag handle
+                    HStack {
+                        Text("HP 33").foregroundColor(.black)/*@START_MENU_TOKEN@*/.bold/*@END_MENU_TOKEN@*/().italic()
+                        Spacer()
+                        Image("drag-vertical")
+                            .resizable().scaledToFit().border(.gray)
+                            .gesture( dragBoundry )
                     }
-                    .padding(.horizontal, 30)
-                    .padding(.vertical, 5)
-                    .background( Color("Background"))
+                    .frame( height: 25 )
+                    
+                    // Main calculator display
+                    Display( model: model )
+                    
+                    SoftKeyRow( keySpec: skSpec, rowSpec: unitRowSpec, keyPressHandler: model )
+                        .padding( .vertical, 5 )
+                    
+                    SoftKeyRow( keySpec: skSpec, rowSpec: fn0RowSpec, keyPressHandler: model )
+                        .padding( .vertical, 5 )
+
+                    Divider()
+                    
+                    // Standard keypads
+                    VStack( alignment: .leading) {
+                        HStack {
+                            Keypad( keySpec: keySpec, padSpec: numPad, keyPressHandler: model )
+                            Keypad( keySpec: keySpec, padSpec: opPad, keyPressHandler: model )
+                        }
+                        HStack {
+                            Keypad( keySpec: keySpec, padSpec: enterPad, keyPressHandler: model)
+                            Keypad( keySpec: keySpec, padSpec: clearPad, keyPressHandler: model)
+                        }
+                    }.alignmentGuide(.leading, computeValue: {_ in 0})
                 }
+                .padding(.horizontal, 30)
+                .padding(.vertical, 5)
+                .background( Color("Background"))
             }
             .ignoresSafeArea(.keyboard)
         }

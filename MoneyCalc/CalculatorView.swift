@@ -70,30 +70,28 @@ struct CalculatorView: View {
         radius: 10, spacing: 10,
         buttonColor: Color("KeyColor"), textColor: Color("KeyText"))
     
-    let unitRowSpec = RowSpec (
+    let unitRowSpec = PadSpec (
         pc: .padUnit,
-        keys: [ SoftKey([.deg], "deg"),
-                SoftKey([.rad], "rad"),
-                SoftKey([.sec], "sec"),
-                SoftKey([.min], "min"),
-                SoftKey([.m],   "m"),
-                SoftKey([.km],  "km")
+        keys: [ Key(.deg, "deg"),
+                Key(.rad, "rad"),
+                Key(.sec, "sec"),
+                Key(.min, "min"),
+                Key(.m,   "m"),
+                Key(.km,  "km")
               ],
-        fontSize: 15.0,
-        caption: "Currency"
+        fontSize: 15.0
     )
     
-    let fn0RowSpec = RowSpec (
+    let fn0RowSpec = PadSpec (
         pc: .padFn0,
-        keys: [ SoftKey([.fix, .sci], "FIX|SCI", fontSize: 14),
-                SoftKey([.sin], "sin"),
-                SoftKey([.cos], "cos"),
-                SoftKey([.tan], "tan"),
-                SoftKey([.log, .ln, .sin, .cos, .tan], "log:ln:sin:cos:tan", fontSize: 10),
-                SoftKey([.pi],  "\u{1d70b}")
+        keys: [ Key(.fix, "Fix", fontSize: 14),
+                Key(.sin, "sin"),
+                Key(.cos, "cos"),
+                Key(.tan, "tan"),
+                Key(.log, "log", fontSize: 10),
+                Key(.pi,  "\u{1d70b}")
             ],
-        fontSize: 18.0,
-        caption: "Fn0"
+        fontSize: 18.0
     )
 
     

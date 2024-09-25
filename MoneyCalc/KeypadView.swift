@@ -47,10 +47,11 @@ struct Key: Identifiable {
 
 struct PadSpec {
     var pc: PadCode
-    var rows: Int
-    var cols: Int
+    var rows: Int = 1
+    var cols: Int = 1
     var keys: [Key]
     var fontSize = 20.0
+    var caption: String?
 }
 
 struct Keypad: View {
@@ -128,28 +129,6 @@ struct Keypad: View {
 
 // ********************************************
 
-struct SoftKey: Identifiable {
-    var kc: [KeyCode]
-    var ch: String
-    var fontSize:Double?
-
-    var id: Int { return self.kc[0].rawValue }
-    
-    init(_ kc: [KeyCode], _ ch: String, fontSize: Double? = nil ) {
-        self.kc = kc
-        self.ch = ch
-        self.fontSize = fontSize
-    }
-}
-
-struct RowSpec {
-    var pc: PadCode
-    var keys: [SoftKey]
-    var fontSize: Double
-    var caption: String
-}
-
-
 extension View {
     /// Applies the given transform if the given condition evaluates to `true`.
     /// - Parameters:
@@ -183,10 +162,8 @@ extension View {
 
 
 struct SoftKeyRow: View {
-    @State private var popPalette: Bool = false
-    
     var keySpec: KeySpec
-    var rowSpec: RowSpec
+    var rowSpec: PadSpec
     
     var keyPressHandler:  KeyPressHandler
     
@@ -195,58 +172,40 @@ struct SoftKeyRow: View {
             ForEach(rowSpec.keys, id: \.id) { key in
                 Button( action: {} )
                 {
-                    let labelList = key.ch.split(separator: "|")
-                    let label = labelList[0]
-                    
-                    let shiftList = key.ch.split(separator: ":")
-                    let keytop = shiftList[0]
-
                     Spacer()
-                    Rectangle()
-                        .foregroundColor(keySpec.buttonColor)
-                        .frame( width: keySpec.width,
-                               height: keySpec.height,
-                               alignment: .center)
-                        .cornerRadius(keySpec.radius)
-                        .overlay(
-                            Text( shiftList.count > 1 ? "\(keytop)" : "\(label)")
-                                .font(.system(size: key.fontSize == nil ? rowSpec.fontSize : key.fontSize! ))
-                                .background( keySpec.buttonColor)
-                                .foregroundColor( keySpec.textColor),
-                            alignment: .center)
-                        .if( labelList.count > 1 ) { view in
-                                view.contextMenu {
-                                    ForEach(0..<labelList.count, id: \.self) { index in
-                                        Button {
-                                            keyPressHandler.keyPress( (rowSpec.pc, key.kc[index]) )
-                                        } label: {
-                                            Text( labelList[index])
-                                        }
-                                    }
-                                }
-                        }
-                        .if( shiftList.count > 1 ) { view in
-                            view.popover( isPresented: $popPalette, attachmentAnchor: .point(.topLeading),
-                                          arrowEdge: .top) {
-                                HStack {
-                                    ForEach(0..<shiftList.count, id: \.self) { index in
-                                        Text( shiftList[index])
-                                            .background( keySpec.buttonColor)
-                                            .foregroundColor( keySpec.textColor)
-                                    }
-                                }
-                                .presentationCompactAdaptation(.popover)
-                            }
-                        }
+                    if let image = key.image {
+                        Rectangle()
+                            .foregroundColor(keySpec.buttonColor)
+                            .frame( width: keySpec.width,
+                                    height: keySpec.height,
+                                    alignment: .center)
+                            .cornerRadius(keySpec.radius)
+                            .overlay(
+                                Image(image).renderingMode(.template).foregroundColor(keySpec.textColor), alignment: .center)
+                    }
+                    else if let label = key.text {
+                        Rectangle()
+                            .foregroundColor(keySpec.buttonColor)
+                            .frame( width: keySpec.width,
+                                   height: keySpec.height,
+                                   alignment: .center)
+                            .cornerRadius(keySpec.radius)
+                            .overlay(
+                                Text( "\(label)")
+                                    .font(.system(size: key.fontSize == nil ? rowSpec.fontSize : key.fontSize! ))
+                                    .background( keySpec.buttonColor)
+                                    .foregroundColor( keySpec.textColor),
+                                alignment: .center)
+                        
+                    }
                     Spacer()
                 }
                 .simultaneousGesture( LongPressGesture().onEnded { _ in
                     print("Secret Long Press Action!")
-                    popPalette = true
                 })
                 .simultaneousGesture( TapGesture().onEnded {
                     print("Boring regular tap")
-                    keyPressHandler.keyPress( (rowSpec.pc, key.kc[0]) )
+                    keyPressHandler.keyPress( (rowSpec.pc, key.kc) )
                 })
              }
         }

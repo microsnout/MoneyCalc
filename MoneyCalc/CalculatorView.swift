@@ -89,7 +89,7 @@ struct CalculatorView: View {
                 SoftKey([.sin], "sin"),
                 SoftKey([.cos], "cos"),
                 SoftKey([.tan], "tan"),
-                SoftKey([.log], "log"),
+                SoftKey([.log, .ln, .sin, .cos, .tan], "log:ln:sin:cos:tan", fontSize: 10),
                 SoftKey([.pi],  "\u{1d70b}")
             ],
         fontSize: 18.0,
@@ -107,7 +107,6 @@ struct CalculatorView: View {
     ]
     
     @State private var location: CGPoint = CGPoint( x: 0, y: 0)
-    
     @State private var movement: CGSize = CGSize.zero
     
     var dragBoundry: some Gesture {
@@ -118,54 +117,58 @@ struct CalculatorView: View {
             }
     }
 
+    
     var body: some View {
         ZStack(alignment: .center) {
             Rectangle()
                 .fill(Color("Display"))
                 .edgesIgnoringSafeArea( .all )
             
-            VStack
+            ZStack
             {
-                MemoryDisplay( model: model, leadingOps: swipeLeadingOpTable )
-                VStack(alignment: .center) {
-                    // App name and drag handle
-                    HStack {
-                        Text("HP 33").foregroundColor(.black)/*@START_MENU_TOKEN@*/.bold/*@END_MENU_TOKEN@*/().italic()
-                        Spacer()
-                        Image("drag-vertical")
-                            .resizable().scaledToFit().border(.gray)
-                            .gesture( dragBoundry )
+                VStack
+                {
+                    MemoryDisplay( model: model, leadingOps: swipeLeadingOpTable )
+                    VStack(alignment: .center) {
+                        // App name and drag handle
+                        HStack {
+                            Text("HP 33").foregroundColor(.black)/*@START_MENU_TOKEN@*/.bold/*@END_MENU_TOKEN@*/().italic()
+                            Spacer()
+                            Image("drag-vertical")
+                                .resizable().scaledToFit().border(.gray)
+                                .gesture( dragBoundry )
+                        }
+                        .frame( height: 25 )
+                        
+                        // Main calculator display
+                        Display( model: model )
+                        
+                        SoftKeyRow( keySpec: skSpec, rowSpec: unitRowSpec, keyPressHandler: model )
+                            .padding( .vertical, 5 )
+                        
+                        SoftKeyRow( keySpec: skSpec, rowSpec: fn0RowSpec, keyPressHandler: model )
+                            .padding( .vertical, 5 )
+                        
+                        Divider()
+                        
+                        // Standard keypads
+                        VStack( alignment: .leading) {
+                            HStack {
+                                Keypad( keySpec: keySpec, padSpec: numPad, keyPressHandler: model )
+                                Keypad( keySpec: keySpec, padSpec: opPad, keyPressHandler: model )
+                            }
+                            HStack {
+                                Keypad( keySpec: keySpec, padSpec: enterPad, keyPressHandler: model)
+                                Keypad( keySpec: keySpec, padSpec: clearPad, keyPressHandler: model)
+                            }
+                        }.alignmentGuide(.leading, computeValue: {_ in 0})
                     }
-                    .frame( height: 25 )
-                    
-                    // Main calculator display
-                    Display( model: model )
-                    
-                    SoftKeyRow( keySpec: skSpec, rowSpec: unitRowSpec, keyPressHandler: model )
-                        .padding( .vertical, 5 )
-                    
-                    SoftKeyRow( keySpec: skSpec, rowSpec: fn0RowSpec, keyPressHandler: model )
-                        .padding( .vertical, 5 )
-
-                    Divider()
-                    
-                    // Standard keypads
-                    VStack( alignment: .leading) {
-                        HStack {
-                            Keypad( keySpec: keySpec, padSpec: numPad, keyPressHandler: model )
-                            Keypad( keySpec: keySpec, padSpec: opPad, keyPressHandler: model )
-                        }
-                        HStack {
-                            Keypad( keySpec: keySpec, padSpec: enterPad, keyPressHandler: model)
-                            Keypad( keySpec: keySpec, padSpec: clearPad, keyPressHandler: model)
-                        }
-                    }.alignmentGuide(.leading, computeValue: {_ in 0})
+                    .padding(.horizontal, 30)
+                    .padding(.vertical, 5)
+                    .background( Color("Background"))
                 }
-                .padding(.horizontal, 30)
-                .padding(.vertical, 5)
-                .background( Color("Background"))
+                .ignoresSafeArea(.keyboard)
             }
-            .ignoresSafeArea(.keyboard)
         }
     }
 }

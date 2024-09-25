@@ -183,6 +183,7 @@ extension View {
 
 
 struct SoftKeyRow: View {
+    @State private var popPalette: Bool = false
     
     var keySpec: KeySpec
     var rowSpec: RowSpec
@@ -192,13 +193,14 @@ struct SoftKeyRow: View {
     var body: some View {
         HStack {
             ForEach(rowSpec.keys, id: \.id) { key in
-                Button( action: {
-                    keyPressHandler.keyPress( (rowSpec.pc, key.kc[0]) )
-                })
+                Button( action: {} )
                 {
                     let labelList = key.ch.split(separator: "|")
                     let label = labelList[0]
                     
+                    let shiftList = key.ch.split(separator: ":")
+                    let keytop = shiftList[0]
+
                     Spacer()
                     Rectangle()
                         .foregroundColor(keySpec.buttonColor)
@@ -207,7 +209,7 @@ struct SoftKeyRow: View {
                                alignment: .center)
                         .cornerRadius(keySpec.radius)
                         .overlay(
-                            Text("\(label)")
+                            Text( shiftList.count > 1 ? "\(keytop)" : "\(label)")
                                 .font(.system(size: key.fontSize == nil ? rowSpec.fontSize : key.fontSize! ))
                                 .background( keySpec.buttonColor)
                                 .foregroundColor( keySpec.textColor),
@@ -223,8 +225,29 @@ struct SoftKeyRow: View {
                                     }
                                 }
                         }
+                        .if( shiftList.count > 1 ) { view in
+                            view.popover( isPresented: $popPalette, attachmentAnchor: .point(.topLeading),
+                                          arrowEdge: .top) {
+                                HStack {
+                                    ForEach(0..<shiftList.count, id: \.self) { index in
+                                        Text( shiftList[index])
+                                            .background( keySpec.buttonColor)
+                                            .foregroundColor( keySpec.textColor)
+                                    }
+                                }
+                                .presentationCompactAdaptation(.popover)
+                            }
+                        }
                     Spacer()
                 }
+                .simultaneousGesture( LongPressGesture().onEnded { _ in
+                    print("Secret Long Press Action!")
+                    popPalette = true
+                })
+                .simultaneousGesture( TapGesture().onEnded {
+                    print("Boring regular tap")
+                    keyPressHandler.keyPress( (rowSpec.pc, key.kc[0]) )
+                })
              }
         }
         

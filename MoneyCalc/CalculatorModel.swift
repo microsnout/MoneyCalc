@@ -34,7 +34,7 @@ enum KeyCode: Int {
 
 
 enum PadCode: Int {
-    case padDigits = 0, padOp, padEnter, padClear, padUnit, padFn0
+    case padDigits = 0, padOp, padEnter, padClear, padUnit, padFn0, padLog
 }
 
 
@@ -569,6 +569,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             var s1 = s0
 
             if s1.convertX( toTag: toType) {
+                s1.Xfmt = s0.Xfmt
                 return s1
             }
             else {

@@ -33,15 +33,18 @@ struct Key: Identifiable {
     var text: String?
     var fontSize:Double?
     var image: ImageResource?
+    var popup: PadCode?
     
     var id: Int { return self.kc.rawValue }
 
-    init(_ kc: KeyCode, _ label: String? = nil, size: Int = 1, fontSize: Double? = nil, image: ImageResource? = nil ) {
+    init(_ kc: KeyCode, _ label: String? = nil, size: Int = 1, fontSize: Double? = nil,
+         image: ImageResource? = nil, popup: PadCode? = nil ) {
         self.kc = kc
         self.text = label
         self.size = size
         self.fontSize = fontSize
         self.image = image
+        self.popup = popup
     }
 }
 
@@ -54,8 +57,67 @@ struct PadSpec {
     var caption: String?
 }
 
-struct Keypad: View {
+extension PadSpec: Hashable {
+    static func == (lhs: PadSpec, rhs: PadSpec) -> Bool {
+        return lhs.pc == rhs.pc
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(pc)
+    }
+}
+
+
+struct KeyView: View {
+    let key: Key
+    let keySpec: KeySpec
+    let padSpec: PadSpec
     
+    init( _ key: Key, _ ks: KeySpec, _ ps: PadSpec ) {
+        self.key = key
+        self.keySpec = ks
+        self.padSpec = ps
+    }
+    
+    @ViewBuilder
+    private var keyRect: some View {
+        Rectangle()
+            .foregroundColor(keySpec.buttonColor)
+            .frame( width: key.size == 2 ?
+                    keySpec.width * 2.0 + keySpec.spacing :
+                        keySpec.width,
+                    height: keySpec.height,
+                    alignment: .center)
+            .cornerRadius(keySpec.radius)
+            .shadow(radius: keySpec.radius)
+    }
+    
+    var body: some View {
+        if let image = key.image {
+            keyRect
+                .overlay(
+                    Image(image).renderingMode(.template).foregroundColor(keySpec.textColor), alignment: .center)
+        }
+        else if let label = key.text {
+            keyRect
+                .overlay(
+                    Text(label)
+                        .font(.system(size: key.fontSize == nil ? padSpec.fontSize : key.fontSize! ))
+                        .background( keySpec.buttonColor)
+                        .foregroundColor( keySpec.textColor),
+                    alignment: .center)
+        }
+        else {
+            // Display blank key, no image, no label
+            keyRect
+        }
+    }
+}
+
+struct Keypad: View {
+    @Binding var popPad: PadSpec?
+    let ns: Namespace.ID
+
     var keySpec: KeySpec
     var padSpec: PadSpec
     
@@ -65,14 +127,6 @@ struct Keypad: View {
     
     private var columns: [GridItem] {
         Array(repeating: .init(.fixed(keySpec.width)), count: padSpec.cols)
-    }
-    
-    init( keySpec: KeySpec, padSpec: PadSpec, keyPressHandler: KeyPressHandler ) {
-        self.keySpec = keySpec
-        self.padSpec = padSpec
-        self.keyPressHandler = keyPressHandler
-        
-        impactFeedback.prepare()
     }
     
     var body: some View {
@@ -85,38 +139,10 @@ struct Keypad: View {
                 Button( action: {
                     keyPressHandler.keyPress( (padSpec.pc, key.kc) )
                     impactFeedback.impactOccurred()
+                    popPad = nil
                 })
                 {
-                    if let image = key.image {
-                        Rectangle()
-                            .foregroundColor(keySpec.buttonColor)
-                            .frame( width: key.size == 2 ?
-                                    keySpec.width * 2.0 + keySpec.spacing :
-                                        keySpec.width,
-                                    height: keySpec.height,
-                                    alignment: .center)
-                            .cornerRadius(keySpec.radius)
-                            .shadow(radius: keySpec.radius)
-                            .overlay(
-                                Image(image).renderingMode(.template).foregroundColor(keySpec.textColor), alignment: .center)
-                    }
-                    else if let label = key.text {
-                        Rectangle()
-                            .foregroundColor(keySpec.buttonColor)
-                            .frame( width: key.size == 2 ?
-                                    keySpec.width * 2.0 + keySpec.spacing :
-                                        keySpec.width,
-                                    height: keySpec.height,
-                                    alignment: .center)
-                            .cornerRadius(keySpec.radius)
-                            .shadow(radius: keySpec.radius)
-                            .overlay(
-                                Text(label)
-                                    .font(.system(size: key.fontSize == nil ? padSpec.fontSize : key.fontSize! ))
-                                    .background( keySpec.buttonColor)
-                                    .foregroundColor( keySpec.textColor),
-                                alignment: .center)
-                    }
+                    KeyView( key, keySpec, padSpec )
                 }
                 
                 if key.size == 2 { Color.clear }
@@ -162,50 +188,37 @@ extension View {
 
 
 struct SoftKeyRow: View {
+    @Binding var popPad: PadSpec?
+    let ns: Namespace.ID
+    
     var keySpec: KeySpec
     var rowSpec: PadSpec
     
     var keyPressHandler:  KeyPressHandler
     
+    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+
     var body: some View {
         HStack {
             ForEach(rowSpec.keys, id: \.id) { key in
                 Button( action: {} )
                 {
                     Spacer()
-                    if let image = key.image {
-                        Rectangle()
-                            .foregroundColor(keySpec.buttonColor)
-                            .frame( width: keySpec.width,
-                                    height: keySpec.height,
-                                    alignment: .center)
-                            .cornerRadius(keySpec.radius)
-                            .overlay(
-                                Image(image).renderingMode(.template).foregroundColor(keySpec.textColor), alignment: .center)
-                    }
-                    else if let label = key.text {
-                        Rectangle()
-                            .foregroundColor(keySpec.buttonColor)
-                            .frame( width: keySpec.width,
-                                   height: keySpec.height,
-                                   alignment: .center)
-                            .cornerRadius(keySpec.radius)
-                            .overlay(
-                                Text( "\(label)")
-                                    .font(.system(size: key.fontSize == nil ? rowSpec.fontSize : key.fontSize! ))
-                                    .background( keySpec.buttonColor)
-                                    .foregroundColor( keySpec.textColor),
-                                alignment: .center)
-                        
-                    }
+                    KeyView( key, keySpec, rowSpec )
                     Spacer()
                 }
-                .simultaneousGesture( LongPressGesture().onEnded { _ in
-                    print("Secret Long Press Action!")
-                })
+                .if ( key.kc == .log ) {
+                    $0.matchedGeometryEffect(id: logPad.pc, in: ns, anchor: .top)
+                    .simultaneousGesture( LongPressGesture().onEnded { _ in
+                        print("Secret Long Press Action!")
+                        impactFeedback.impactOccurred()
+                        popPad = logPad
+                    })
+                }
                 .simultaneousGesture( TapGesture().onEnded {
                     print("Boring regular tap")
                     keyPressHandler.keyPress( (rowSpec.pc, key.kc) )
+                    impactFeedback.impactOccurred()
                 })
              }
         }

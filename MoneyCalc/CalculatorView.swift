@@ -25,6 +25,32 @@ extension View {
 }
 
 
+// *** Popup Keypads ***
+
+let logPad = PadSpec (
+    pc: .padLog,
+    rows: 1, cols: 2,
+    keys: [ Key(.log, "log"),
+            Key(.ln,  "ln")],
+    fontSize: 18.0,
+    caption: "Log Pad Popup"
+)
+
+
+extension PadCode {
+    
+    var spec: PadSpec? {
+        switch self {
+        case .padLog: logPad
+            
+        default: nil
+        }
+    }
+}
+
+// ******************
+
+
 struct CalculatorView: View {
     @StateObject  var model = CalculatorModel()
     
@@ -63,6 +89,7 @@ struct CalculatorView: View {
         keys: [ Key(.back, "BACK/UNDO", size: 2, fontSize: 12), Key(.clear, "CLx", fontSize: 12)
               ])
     
+
     // **************************
     
     let skSpec = KeySpec(
@@ -72,6 +99,7 @@ struct CalculatorView: View {
     
     let unitRowSpec = PadSpec (
         pc: .padUnit,
+        cols: 6,
         keys: [ Key(.deg, "deg"),
                 Key(.rad, "rad"),
                 Key(.sec, "sec"),
@@ -88,12 +116,12 @@ struct CalculatorView: View {
                 Key(.sin, "sin"),
                 Key(.cos, "cos"),
                 Key(.tan, "tan"),
-                Key(.log, "log", fontSize: 10),
+                Key(.log, "log..", fontSize: 14, popup: .padLog),
                 Key(.pi,  "\u{1d70b}")
             ],
         fontSize: 18.0
     )
-
+    
     
     // **************************
     
@@ -107,12 +135,49 @@ struct CalculatorView: View {
     @State private var location: CGPoint = CGPoint( x: 0, y: 0)
     @State private var movement: CGSize = CGSize.zero
     
+    @State private var popPad: PadSpec? = nil
+    @Namespace private var nsPopPad
+    
     var dragBoundry: some Gesture {
         DragGesture()
             .onChanged { value in
                 self.movement = value.translation
                 print(self.movement)
             }
+    }
+
+    
+    @ViewBuilder
+    private var customModal: some View {
+        if popPad != nil {
+            Rectangle()
+                .opacity(0.0001)
+        }
+    }
+    
+
+    @ViewBuilder
+    private var customPopover: some View {
+        if let popPad {
+            Keypad(
+                popPad: $popPad, ns: nsPopPad,
+                keySpec: skSpec, padSpec: logPad,
+                keyPressHandler: model
+            )
+                .padding()
+                .background {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color("Background"))
+                        .shadow(radius: 6)
+                }
+                .matchedGeometryEffect(
+                    id: popPad.pc,
+                    in: nsPopPad,
+                    properties: .position,
+                    anchor: .bottom,
+                    isSource: false
+                )
+        }
     }
 
     
@@ -141,10 +206,12 @@ struct CalculatorView: View {
                         // Main calculator display
                         Display( model: model )
                         
-                        SoftKeyRow( keySpec: skSpec, rowSpec: unitRowSpec, keyPressHandler: model )
+                        Keypad( popPad: $popPad, ns: nsPopPad,
+                                    keySpec: skSpec, padSpec: unitRowSpec, keyPressHandler: model )
                             .padding( .vertical, 5 )
                         
-                        SoftKeyRow( keySpec: skSpec, rowSpec: fn0RowSpec, keyPressHandler: model )
+                        SoftKeyRow( popPad: $popPad, ns: nsPopPad,
+                                    keySpec: skSpec, rowSpec: fn0RowSpec, keyPressHandler: model )
                             .padding( .vertical, 5 )
                         
                         Divider()
@@ -152,12 +219,12 @@ struct CalculatorView: View {
                         // Standard keypads
                         VStack( alignment: .leading) {
                             HStack {
-                                Keypad( keySpec: keySpec, padSpec: numPad, keyPressHandler: model )
-                                Keypad( keySpec: keySpec, padSpec: opPad, keyPressHandler: model )
+                                Keypad( popPad: $popPad, ns: nsPopPad, keySpec: keySpec, padSpec: numPad, keyPressHandler: model )
+                                Keypad( popPad: $popPad, ns: nsPopPad, keySpec: keySpec, padSpec: opPad, keyPressHandler: model )
                             }
                             HStack {
-                                Keypad( keySpec: keySpec, padSpec: enterPad, keyPressHandler: model)
-                                Keypad( keySpec: keySpec, padSpec: clearPad, keyPressHandler: model)
+                                Keypad( popPad: $popPad, ns: nsPopPad, keySpec: keySpec, padSpec: enterPad, keyPressHandler: model)
+                                Keypad( popPad: $popPad, ns: nsPopPad, keySpec: keySpec, padSpec: clearPad, keyPressHandler: model)
                             }
                         }.alignmentGuide(.leading, computeValue: {_ in 0})
                     }
@@ -166,6 +233,17 @@ struct CalculatorView: View {
                     .background( Color("Background"))
                 }
                 .ignoresSafeArea(.keyboard)
+                
+                customModal
+                    .onTapGesture {
+                        popPad = nil
+                    }
+
+                customPopover
+                    .transition(
+                        .opacity.combined(with: .scale)
+                        .animation(.bouncy(duration: 0.25, extraBounce: 0.2))
+                    )
             }
         }
     }

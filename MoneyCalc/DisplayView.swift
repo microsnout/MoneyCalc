@@ -126,7 +126,7 @@ struct TypedRegister: View {
                 }
                 
                 if let suffix = row.suffix {
-                    Text(suffix).font(spec.suffixFont).bold().foregroundColor(Color.gray).padding(.leading, 10)
+                    Text(suffix).font(spec.suffixFont).bold().foregroundColor(Color("Units")).padding(.leading, 10)
                 }
             }
             .frame( height: 20 )

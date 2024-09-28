@@ -50,11 +50,22 @@ struct Key: Identifiable {
 
 struct PadSpec {
     var pc: PadCode
-    var rows: Int = 1
     var cols: Int = 1
     var keys: [Key]
     var fontSize = 20.0
     var caption: String?
+    
+    static var specList: [PadCode : PadSpec] = [:]
+    
+    init(pc: PadCode, cols: Int, keys: [Key], fontSize: Double = 20.0, caption: String? = nil) {
+        self.pc = pc
+        self.cols = cols
+        self.keys = keys
+        self.fontSize = fontSize
+        self.caption = caption
+        
+        PadSpec.specList[pc] = self
+    }
 }
 
 extension PadSpec: Hashable {
@@ -136,13 +147,34 @@ struct Keypad: View {
             spacing: keySpec.spacing
         ) {
             ForEach(padSpec.keys) { key in
-                Button( action: {
-                    keyPressHandler.keyPress( (padSpec.pc, key.kc) )
-                    impactFeedback.impactOccurred()
-                    popPad = nil
-                })
+                if let pc = key.popup,
+                   let spec = pc.spec
                 {
-                    KeyView( key, keySpec, padSpec )
+                    Button( action: {} )
+                    {
+                        KeyView( key, keySpec, padSpec )
+                    }
+                    .matchedGeometryEffect(id: pc, in: ns, anchor: .top)
+                    .simultaneousGesture( LongPressGesture( minimumDuration: 0.5).onEnded { _ in
+                            print("Secret Long Press Action!")
+                            impactFeedback.impactOccurred()
+                            popPad = spec
+                        })
+                    .simultaneousGesture( TapGesture().onEnded {
+                        print("Boring regular tap")
+                        keyPressHandler.keyPress( (pc, key.kc) )
+                        impactFeedback.impactOccurred()
+                    })
+                }
+                else {
+                    Button( action: {
+                        keyPressHandler.keyPress( (padSpec.pc, key.kc) )
+                        impactFeedback.impactOccurred()
+                        popPad = nil
+                    })
+                    {
+                        KeyView( key, keySpec, padSpec )
+                    }
                 }
                 
                 if key.size == 2 { Color.clear }
@@ -187,42 +219,17 @@ extension View {
 }
 
 
-struct SoftKeyRow: View {
-    @Binding var popPad: PadSpec?
-    let ns: Namespace.ID
-    
-    var keySpec: KeySpec
-    var rowSpec: PadSpec
-    
-    var keyPressHandler:  KeyPressHandler
-    
-    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-
-    var body: some View {
-        HStack {
-            ForEach(rowSpec.keys, id: \.id) { key in
-                Button( action: {} )
-                {
-                    Spacer()
-                    KeyView( key, keySpec, rowSpec )
-                    Spacer()
-                }
-                .if ( key.kc == .log ) {
-                    $0.matchedGeometryEffect(id: logPad.pc, in: ns, anchor: .top)
-                    .simultaneousGesture( LongPressGesture().onEnded { _ in
-                        print("Secret Long Press Action!")
-                        impactFeedback.impactOccurred()
-                        popPad = logPad
-                    })
-                }
-                .simultaneousGesture( TapGesture().onEnded {
-                    print("Boring regular tap")
-                    keyPressHandler.keyPress( (rowSpec.pc, key.kc) )
-                    impactFeedback.impactOccurred()
-                })
-             }
+extension View {
+    @ViewBuilder func `ifpop`<Content: View>(_ pc: PadCode?, transform: (Self) -> Content) -> some View {
+        if pc != nil && pc!.spec != nil {
+            transform(self)
+        } else {
+            self
         }
-        
+    }
+}
+
+
 //  Rectangle around rows with caption text
 //        .padding( .vertical, 12 )
 //        .overlay(
@@ -242,7 +249,5 @@ struct SoftKeyRow: View {
 //                )
 //        )
         
-    }
-}
 
 

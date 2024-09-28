@@ -25,29 +25,6 @@ extension View {
 }
 
 
-// *** Popup Keypads ***
-
-let logPad = PadSpec (
-    pc: .padLog,
-    rows: 1, cols: 2,
-    keys: [ Key(.log, "log"),
-            Key(.ln,  "ln")],
-    fontSize: 18.0,
-    caption: "Log Pad Popup"
-)
-
-
-extension PadCode {
-    
-    var spec: PadSpec? {
-        switch self {
-        case .padLog: logPad
-            
-        default: nil
-        }
-    }
-}
-
 // ******************
 
 
@@ -61,7 +38,7 @@ struct CalculatorView: View {
     
     let numPad = PadSpec(
         pc: .padDigits,
-        rows: 4, cols: 3,
+        cols: 3,
         keys: [ Key(.key7, "7"), Key(.key8, "8"), Key(.key9, "9"),
                 Key(.key4, "4"), Key(.key5, "5"), Key(.key6, "6"),
                 Key(.key1, "1"), Key(.key2, "2"), Key(.key3, "3"),
@@ -70,7 +47,7 @@ struct CalculatorView: View {
     
     let opPad = PadSpec(
         pc: .padOp,
-        rows: 4, cols: 3,
+        cols: 3,
         keys: [ Key(.divide, "÷"), Key(.fixL, ".00\u{2190}", fontSize: 12), Key(.y2x, image: .yx),
                 Key(.times, "×"),  Key(.fixR, ".00\u{2192}", fontSize: 12), Key(.inv, image: .onex),
                 Key(.minus, "−"),  Key(.xy, "X\u{21c6}Y", fontSize: 12),    Key(.x2, image: .x2),
@@ -79,16 +56,38 @@ struct CalculatorView: View {
     
     let enterPad = PadSpec(
         pc: .padEnter,
-        rows: 1, cols: 3,
+        cols: 3,
         keys: [ Key(.enter, "Enter", size: 2, fontSize: 15), Key(.eex, "EE", fontSize: 15)
               ])
     
     let clearPad = PadSpec(
         pc: .padClear,
-        rows: 1, cols: 3,
+        cols: 3,
         keys: [ Key(.back, "BACK/UNDO", size: 2, fontSize: 12), Key(.clear, "CLx", fontSize: 12)
               ])
     
+
+    // *** Popup Keypads ***
+
+    let sinPad = PadSpec (
+        pc: .padSin,
+        cols: 2,
+        keys: [ Key(.sin, "sin"),
+                Key(.cos, "cos"),
+                Key(.tan,  "tan")],
+        fontSize: 18.0,
+        caption: "Log Pad Popup"
+    )
+
+    let logPad = PadSpec (
+        pc: .padLog,
+        cols: 2,
+        keys: [ Key(.log, "log"),
+                Key(.ln,  "ln")],
+        fontSize: 18.0,
+        caption: "Log Pad Popup"
+    )
+
 
     // **************************
     
@@ -112,14 +111,15 @@ struct CalculatorView: View {
     
     let fn0RowSpec = PadSpec (
         pc: .padFn0,
-        keys: [ Key(.fix, "Fix", fontSize: 14),
-                Key(.sin, "sin"),
+        cols: 6,
+        keys: [ Key(.fix, "fix"),
+                Key(.sin, "sin..", popup: .padSin),
                 Key(.cos, "cos"),
                 Key(.tan, "tan"),
                 Key(.log, "log..", fontSize: 14, popup: .padLog),
-                Key(.pi,  "\u{1d70b}")
+                Key(.pi,  "\u{1d70b}", fontSize: 20)
             ],
-        fontSize: 18.0
+        fontSize: 14.0
     )
     
     
@@ -161,7 +161,7 @@ struct CalculatorView: View {
         if let popPad {
             Keypad(
                 popPad: $popPad, ns: nsPopPad,
-                keySpec: skSpec, padSpec: logPad,
+                keySpec: skSpec, padSpec: popPad,
                 keyPressHandler: model
             )
                 .padding()
@@ -198,7 +198,7 @@ struct CalculatorView: View {
                             Text("HP 33").foregroundColor(.black)/*@START_MENU_TOKEN@*/.bold/*@END_MENU_TOKEN@*/().italic()
                             Spacer()
                             Image("drag-vertical")
-                                .resizable().scaledToFit().border(.gray)
+                                .resizable().scaledToFit()
                                 .gesture( dragBoundry )
                         }
                         .frame( height: 25 )
@@ -208,11 +208,11 @@ struct CalculatorView: View {
                         
                         Keypad( popPad: $popPad, ns: nsPopPad,
                                     keySpec: skSpec, padSpec: unitRowSpec, keyPressHandler: model )
-                            .padding( .vertical, 5 )
+                            .padding( .vertical, 1 )
                         
-                        SoftKeyRow( popPad: $popPad, ns: nsPopPad,
-                                    keySpec: skSpec, rowSpec: fn0RowSpec, keyPressHandler: model )
-                            .padding( .vertical, 5 )
+                        Keypad( popPad: $popPad, ns: nsPopPad,
+                                    keySpec: skSpec, padSpec: fn0RowSpec, keyPressHandler: model )
+                            .padding( .vertical, 1 )
                         
                         Divider()
                         

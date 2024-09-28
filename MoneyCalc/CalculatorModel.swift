@@ -34,7 +34,11 @@ enum KeyCode: Int {
 
 
 enum PadCode: Int {
-    case padDigits = 0, padOp, padEnter, padClear, padUnit, padFn0, padLog
+    case padDigits = 0, padOp, padEnter, padClear, padUnit, padFn0, padLog, padSin
+    
+    var spec: PadSpec? {
+        PadSpec.specList[self]
+    }
 }
 
 
@@ -265,9 +269,14 @@ struct CalcState {
         set { stack[regY].value.tag = newValue }
     }
     
+    var Yfmt: FormatRec {
+        get { stack[regY].value.fmt }
+        set { stack[regY].value.fmt = newValue }
+    }
+    
     var Ytv: TaggedValue {
         get { stack[regY].value }
-        set { self.Yt = newValue.tag; self.Y = newValue.reg }
+        set { self.Yt = newValue.tag; self.Y = newValue.reg; self.Yfmt = newValue.fmt }
     }
     
     var Z: Double {

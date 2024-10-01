@@ -48,13 +48,16 @@ struct MonoText: View {
 
     var body: some View {
         HStack( alignment: self.alignment, spacing: 0 ) {
+            let chSeq = Array(self.content)
             ForEach(0..<self.content.count, id: \.self) { index in
-                Text("\(self.content[self.content.index(self.content.startIndex, offsetBy: index)].description)")
+                let ch = chSeq[index]
+                let cw = ch == "%" ? self.charWidth + 5 : self.charWidth
+                Text( String(ch))
                     .font(font)
-                    .foregroundColor(Color("DisplayText")).frame(width: self.charWidth)
+                    .foregroundColor(Color("DisplayText")).frame(width: cw)
             }
             .if ( addon != nil ) { view in
-                /// Used to add an underscore cursor in text entry mode
+                // Used to add an underscore cursor in text entry mode
                 HStack( alignment: self.alignment, spacing: 0 ) {
                     view
                     Text(addon!)

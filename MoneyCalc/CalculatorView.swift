@@ -24,6 +24,15 @@ extension View {
     }
 }
 
+enum PadCode: Int {
+    case padDigits = 0, padOp, padEnter, padClear, padUnit, padFn0, padFmt, padLog, padSin
+    
+    var spec: PadSpec? {
+        PadSpec.specList[self]
+    }
+}
+
+
 
 // ******************
 
@@ -49,7 +58,7 @@ struct CalculatorView: View {
         pc: .padOp,
         cols: 3,
         keys: [ Key(.divide, "÷"), Key(.fixL, ".00\u{2190}", fontSize: 12), Key(.y2x, image: .yx),
-                Key(.times, "×"),  Key(.fixR, ".00\u{2192}", fontSize: 12), Key(.inv, image: .onex),
+                Key(.times, "×"),  Key(.lastx, "LASTx", fontSize: 10), Key(.inv, image: .onex),
                 Key(.minus, "−"),  Key(.xy, "X\u{21c6}Y", fontSize: 12),    Key(.x2, image: .x2),
                 Key(.plus,  "+"),  Key(.roll, "R\u{2193}", fontSize: 12),   Key(.sqrt, image: .rx)
               ])
@@ -112,17 +121,30 @@ struct CalculatorView: View {
     let fn0RowSpec = PadSpec (
         pc: .padFn0,
         cols: 6,
-        keys: [ Key(.fix, "fix"),
-                Key(.sin, "sin..", popup: .padSin),
+        keys: [ Key(.sin, "sin..", popup: .padSin),
                 Key(.cos, "cos"),
                 Key(.tan, "tan"),
                 Key(.log, "log..", fontSize: 14, popup: .padLog),
+                Key(.e,   "e", fontSize: 18),
                 Key(.pi,  "\u{1d70b}", fontSize: 20)
             ],
         fontSize: 14.0
     )
     
+    let fmtRowSpec = PadSpec (
+        pc: .padFmt,
+        cols: 6,
+        keys: [ Key(.fix, "fix"),
+                Key(.sci, "sci"),
+                Key(.percent, "%"),
+                Key(.currency, "$"),
+                Key(.fixL, ".00\u{2190}", fontSize: 12.0),
+                Key(.fixR, ".00\u{2192}", fontSize: 12.0),
+            ],
+        fontSize: 14.0
+    )
     
+
     // **************************
     
     let swipeLeadingOpTable: [(KeyCode, String, Color)] = [
@@ -227,6 +249,12 @@ struct CalculatorView: View {
                                 Keypad( popPad: $popPad, ns: nsPopPad, keySpec: keySpec, padSpec: clearPad, keyPressHandler: model)
                             }
                         }.alignmentGuide(.leading, computeValue: {_ in 0})
+                        
+                        Divider()
+
+                        Keypad( popPad: $popPad, ns: nsPopPad,
+                                    keySpec: skSpec, padSpec: fmtRowSpec, keyPressHandler: model )
+                            .padding( .vertical, 1 )
                     }
                     .padding(.horizontal, 30)
                     .padding(.vertical, 5)

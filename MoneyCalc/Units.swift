@@ -380,6 +380,15 @@ class TypeDef {
         return tid
     }
     
+    init() {
+        self.uid = StdUnitId.untyped.rawValue
+        self.tid = 0
+        self.tc  = []
+        self.sym = nil
+        self.ratio = 1.0
+        self.delta = 0.0
+    }
+    
     init( _ uid: StdUnitId, sym: String, _ ratio: Double, delta: Double = 0.0 ) {
         self.uid = uid.rawValue
         self.tid = TypeDef.getNewTid()
@@ -406,7 +415,7 @@ class TypeDef {
         }
     }
     
-    static var typeDict: [TypeTag : TypeDef] = [:]
+    static var typeDict: [TypeTag : TypeDef] = [tagUntyped : TypeDef()]
     static var symDict:  [String : TypeTag] = [:]
     static var sigDict:  [TypeSignature : TypeTag] = [:]
     
@@ -623,10 +632,81 @@ func unitConvert( from: TypeTag, to: TypeTag ) -> ConversionSeq? {
 }
 
 
-func typeProduct( _ tagA: TypeTag, _ tagB: TypeTag, quotient: Bool = false ) -> (TypeCode, Double)? {
+func typeAddable( _ tagA: TypeTag, _ tagB: TypeTag ) -> Double? {
+    /// typeAddable( )
+    /// Determine if it is possible to add (or subtract) B to/from A
+    /// Return the value conversion ratio to be applied to B to make it compatible with A
+    ///
+    if tagA == tagUntyped && tagB != tagUntyped {
+        // Cannot convert B operand back to untyped
+        return nil
+    }
+    
+    if tagA == tagB || tagB == tagUntyped {
+        // A is same as B or B is untyped and can be tagged same as A
+        // No value conversion, one to one
+        return 1.0
+    }
+    
+    // Unit signatures must match
+    if let aDef = TypeDef.typeDict[tagA],
+       let bDef = TypeDef.typeDict[tagB]
+    {
+        let ucA = toUnitCode(from: aDef.tc)
+        let ucB = toUnitCode(from: bDef.tc)
+        
+        if  getUnitSig(ucA) != getUnitSig(ucB) {
+            // Incompatible types
+            return nil
+        }
+        
+        var ratio: Double = 1.0
+
+        for (aFac, bFac) in zip( aDef.tc, bDef.tc) {
+            let (aTag, aExp) = aFac
+            let (bTag, bExp) = bFac
+            
+            if let afDef = TypeDef.typeDict[aTag],
+               let bfDef = TypeDef.typeDict[bTag]
+            {
+                // Convert B value to A units
+                ratio /= pow(bfDef.ratio, Double(bExp))
+                ratio *= pow(afDef.ratio, Double(aExp))
+            }
+            else {
+                // Unknown type factor
+                return nil
+            }
+        }
+        
+        // Return resulting value ratio
+        return ratio
+    }
+    else {
+        // Unkown types
+        return nil
+    }
+}
+
+
+func typeProduct( _ tagA: TypeTag, _ tagB: TypeTag, quotient: Bool = false ) -> (TypeTag, Double)? {
     /// typeProduct( )
     /// Produce type code of product A*B or quotient A/B
+    /// Returns new resulting type code and ratio to convert value
     ///
+    if tagB == tagUntyped {
+        return (tagA, 1.0)
+    }
+    
+    if tagA == tagUntyped {
+        if !quotient {
+            // Product of untyped * typed
+            return (tagB, 1.0)
+        }
+        
+        // quotient of untyped/typed, fall through to compute inverse of type
+    }
+    
     if let defA = TypeDef.typeDict[tagA],
        let defB = TypeDef.typeDict[tagB]
     {
@@ -678,10 +758,58 @@ func typeProduct( _ tagA: TypeTag, _ tagB: TypeTag, quotient: Bool = false ) -> 
         }
         
         normalizeTypeCode(&tcQ)
-        return (tcQ, ratio)
+        
+        if let tagQ = lookupTypeTag(tcQ) {
+            return (tagQ, ratio)
+        }
+        else {
+            // No tag for resulting type
+            return nil
+        }
         
     }
     return  nil
+}
+
+
+func typeExponent( _ tagY: TypeTag, x: Int ) -> TypeTag? {
+    
+    if let yDef = TypeDef.typeDict[tagY] {
+        let tcY: TypeCode = yDef.tc
+        var tcQ: TypeCode = []
+        
+        for (tag, exp) in tcY {
+            tcQ.append( (tag, exp*x) )
+        }
+        
+        normalizeTypeCode(&tcQ)
+        return lookupTypeTag(tcQ)
+    }
+    
+    // Undefined type Y
+    return nil
+}
+
+
+func typeNthRoot( _ tagY: TypeTag, n: Int ) -> TypeTag? {
+    
+    if let yDef = TypeDef.typeDict[tagY] {
+        let tcY: TypeCode = yDef.tc
+        var tcQ: TypeCode = []
+        
+        for (tag, exp) in tcY {
+            if exp % n != 0 {
+                return nil
+            }
+            tcQ.append( (tag, exp/n) )
+        }
+        
+        normalizeTypeCode(&tcQ)
+        return lookupTypeTag(tcQ)
+    }
+    
+    // Undefined type Y
+    return nil
 }
 
 
@@ -689,6 +817,11 @@ func lookupTypeTag( _ tc: TypeCode ) -> TypeTag? {
     /// lookupTypeTag( TypeCode ) -> TypeTag
     /// Find a type tag for the provided type code sequence
     ///
+    if tc.isEmpty {
+        // An untyped value has no units
+        return tagUntyped
+    }
+    
     let tsig = getTypeSig(tc)
     
     if let tag = TypeDef.sigDict[tsig] {

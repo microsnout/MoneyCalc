@@ -12,6 +12,19 @@ import OSLog
 let logM = Logger(subsystem: "com.microsnout.calculator", category: "model")
 
 
+func isInt( _ x: Double ) -> Int? {
+    /// Test if a Double is an integer
+    /// Valid down to 1.0000000000000005 or about 16 significant digits
+    ///
+    x == floor(x) ? Int(x) : nil
+}
+
+func isEven( _ x: Int ) -> Bool {
+    // Return true if x is evenly divisible by 2.
+    x % 2 == 0
+}
+
+
 enum KeyCode: Int {
     case key0 = 0, key1, key2, key3, key4, key5, key6, key7, key8, key9
     
@@ -29,7 +42,9 @@ enum KeyCode: Int {
     
     case deg = 80, rad, sec, min, hr, yr, mm, cm, m, km
     
-    case sk0 = 90, sk1, sk2, sk3, sk4, sk5, sk6
+    case noop = 90
+    
+    case sk0 = 100, sk1, sk2, sk3, sk4, sk5, sk6
 }
 
 
@@ -187,61 +202,20 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         }
         
         func transition(_ s0: CalcState ) -> CalcState? {
-            if s0.Yt == tagUntyped && s0.Xt != tagUntyped {
-                // Cannot convert X operand back to untyped
-                return nil
-            }
-            else if s0.Xt == s0.Yt || s0.Xt == tagUntyped {
-                // X is same as Y or X is untyped and can be tagged same as Y
+            if let ratio = typeAddable( s0.Yt, s0.Xt) {
+                // Operation is possible with scaling of X value
                 var s1 = s0
                 s1.stackDrop()
-                s1.X = function( s0.Y, s0.X )
+                s1.X = function( s0.Y, s0.X * ratio )
                 return s1
             }
-            
-            // Unit signatures must match
-            if let xDef = TypeDef.typeDict[s0.Xt],
-               let yDef = TypeDef.typeDict[s0.Yt]
-            {
-                let ucX = toUnitCode(from: xDef.tc)
-                let ucY = toUnitCode(from: yDef.tc)
-                
-                if  getUnitSig(ucX) != getUnitSig(ucY) {
-                    // Incompatible types
-                    return nil
-                }
-                else {
-                    var s1 = s0
-                    var x0: Double = s0.X
-                    s1.stackDrop()
-
-                    for (yFac, xFac) in zip( yDef.tc, xDef.tc) {
-                        let (yTag, yExp) = yFac
-                        let (xTag, xExp) = xFac
-                        
-                        if let xfDef = TypeDef.typeDict[xTag],
-                           let yfDef = TypeDef.typeDict[yTag]
-                        {
-                            // Convert x value to y units
-                            x0 /= pow(xfDef.ratio, Double(xExp))
-                            x0 *= pow(yfDef.ratio, Double(yExp))
-                        }
-                        else {
-                            // Unknown type factor
-                            return nil
-                        }
-                    }
-                    
-                    s1.X = function( s0.Y, x0 )
-                    return s1
-                }
-            }
             else {
-                // Unkown types
+                // New state not possible
                 return nil
             }
         }
     }
+    
     
     struct BinaryOpMultiplicative: StateOperator {
         let kc: KeyCode
@@ -258,28 +232,15 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             var s1 = s0
             s1.stackDrop()
             
-            if s0.Yt.isType(.untyped) {
-                // Scaling typed value by an untyped - tag unchanged
-                s1.X = _op( s0.Y, s0.X )
-                s1.Xt = s0.Xt
-            }
-            else if s0.Xt.isType(.untyped) {
-                // Scaling typed value by an untyped
-                s1.X = _op( s0.Y, s0.X )
-                s1.Xt = s0.Yt
+            if let (tag, ratio) = typeProduct(s0.Yt, s0.Xt, quotient: kc == .divide )
+            {
+                // Successfully produced new type tag
+                s1.X = _op(s0.Y, s0.X) * ratio
+                s1.Xt = tag
             }
             else {
-                if let (tc, ratio) = typeProduct(s0.Yt, s0.Xt, quotient: kc == .divide ),
-                   let tag = lookupTypeTag(tc)
-                {
-                    // Successfully produced new type tag
-                    s1.X = _op(s0.Y, s0.X) * ratio
-                    s1.Xt = tag
-                }
-                else {
-                    // Cannot multiply these types
-                    return nil
-                }
+                // Cannot multiply these types
+                return nil
             }
             
             return s1
@@ -368,12 +329,6 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         .times: BinaryOpMultiplicative( .times ),
         .divide: BinaryOpMultiplicative( .divide ),
 
-        // Square root, inverse, x squared, y to the x
-        .sqrt:  UnaryOp( sqrt ),
-        .inv:   UnaryOp( { (x: Double) -> Double in return 1.0/x } ),
-        .x2:    UnaryOp( { (x: Double) -> Double in return x*x } ),
-        .y2x:   BinaryOpReal( pow ),
-        
         // Math function row 0
         .sin:   UnaryOp( parm: tagRad, result: tagUntyped, sin ),
         .cos:   UnaryOp( parm: tagRad, result: tagUntyped, cos ),
@@ -384,6 +339,75 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         
         .pi:    Constant( Double.pi ),
         .e:     Constant( exp(1.0) ),
+        
+        .sqrt:
+            CustomOp { s0 in
+                if s0.Xt == tagUntyped {
+                    // Simple case, X is untyped value
+                    var s1 = s0
+                    s1.X = sqrt(s0.X)
+                    return s1
+                }
+                
+                if let tag = typeNthRoot(s0.Xt, n: 2) {
+                    // Successful nth root of type tag
+                    var s1 = s0
+                    s1.Xtv = TaggedValue(tag, sqrt(s0.X), format: s0.Xfmt)
+                    return s1
+                }
+                
+                // Failed operation
+                return nil
+            },
+        
+        .y2x:
+            CustomOp { s0 in
+                if s0.Xt != tagUntyped {
+                    // Exponent must be untyped value
+                    return nil
+                }
+                
+                if s0.Yt == tagUntyped {
+                    // Simple case, both operands untyped
+                    var s1 = s0
+                    s1.stackDrop()
+                    s1.X = pow(s0.Y, s0.X)
+                    return s1
+                }
+                
+                if let exp = isInt(s0.X),
+                   let tag = typeExponent( s0.Yt, x: exp )
+                {
+                    // Successful type exponentiation
+                    var s1 = s0
+                    s1.stackDrop()
+                    s1.Xtv = TaggedValue(tag, pow(s0.Y, s0.X), format: s0.Yfmt)
+                    return s1
+                }
+                
+                // Failed operation
+                return nil
+            },
+        
+        .x2:
+            CustomOp { s0 in
+                var s1 = s0
+                if let (tag, ratio) = typeProduct(s0.Xt, s0.Xt) {
+                    s1.Xtv = TaggedValue(tag, s0.X * s0.X, format: s0.Xfmt)
+                    return s1
+                }
+                return nil
+            },
+        
+        .inv:
+            CustomOp { s0 in
+                var s1 = s0
+                if let (tag, ratio) = typeProduct(tagUntyped, s0.Xt, quotient: true) {
+                    s1.Xtv = TaggedValue(tag, 1.0 / s0.X, format: s0.Xfmt)
+                    return s1
+                }
+                return nil
+            },
         
         .clear:
             // Clear X register

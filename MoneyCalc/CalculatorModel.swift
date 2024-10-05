@@ -36,7 +36,9 @@ enum KeyCode: Int {
     
     case y2x = 40, inv, x2, sqrt
     
-    case fn0 = 50, sin, cos, tan, log, ln, pi, asin, acos, atan, tenExp, eExp, e
+    case fn0 = 50, sin, cos, tan, log, ln, pi, asin, acos, atan
+    
+    case tenExp = 60, eExp, e
     
     case fix = 70, sci, eng, percent, currency
     
@@ -337,6 +339,9 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         .log:   UnaryOp( result: tagUntyped, log10 ),
         .ln:    UnaryOp( result: tagUntyped, log ),
         
+        .tenExp: UnaryOp( parm: tagUntyped, result: tagUntyped, { x in pow(10.0, x) } ),
+        .eExp: UnaryOp( parm: tagUntyped, result: tagUntyped, { x in exp(x) } ),
+
         .pi:    Constant( Double.pi ),
         .e:     Constant( exp(1.0) ),
         
@@ -446,6 +451,9 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
     
     func EntryModeKeypress(_ keyCode: KeyCode ) -> Bool {
         if !entryKeys.contains(keyCode) {
+            // Any key other than valid Entry mode keys cause en exit from the mode
+            // with acceptance of the entered value
+            state.acceptTextEntry()
             return false
         }
         
@@ -491,9 +499,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                 state.appendTextEntry( String(keyCode.rawValue))
                 
             case .dot:
-                if !state.entryText.contains(".") {
-                    state.appendTextEntry(".")
-                }
+                state.appendTextEntry(".")
                 
             case .eex:
                 state.startExpEntry()
@@ -502,16 +508,12 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                 state.flipTextSign()
 
             case .back:
-                state.entryText.removeLast()
+                state.backspaceEntry()
                 
-                if state.entryText.isEmpty {
-                    // Clear X, exit entry mode, no further actions
-                    state.clearEntry()
-                    
-                    // Backspaced all chars, cancel state change
-                    if let lastState = undoStack.pop() {
-                        state = lastState
-                    }
+                if !state.entryMode {
+                    // Exited entry mode
+                    // Return false so .back is processed as a non entry mode undo
+                    return false
                 }
 
             default:
@@ -528,6 +530,7 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
         let ( _, keyCode) = event
         
         if state.entryMode && EntryModeKeypress(keyCode) {
+            // We are in Entry mode and this event has been processed and we stay in this mode
             return
         }
         
@@ -548,9 +551,9 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
                 state = lastState
             }
             
-        case .enter:            // Push stack up, x becomes entry value
+        case .enter:
+            // Push stack up, x becomes entry value
             undoStack.push(state)
-            state.acceptTextEntry()
             state.stackLift()
             state.noLift = true
             
@@ -566,29 +569,24 @@ class CalculatorModel: ObservableObject, KeyPressHandler {
             
         case .fix:
             undoStack.push(state)
-            state.acceptTextEntry()
             state.Xfmt.mode = .decimal
             
         case .sci:
             undoStack.push(state)
-            state.acceptTextEntry()
             state.Xfmt.mode = .scientific
             
         case .percent:
             undoStack.push(state)
-            state.acceptTextEntry()
             state.Xfmt = CalcState.defaultPercentFormat
             
         case .currency:
             undoStack.push(state)
-            state.acceptTextEntry()
             state.Xfmt = CalcState.defaultCurrencyFormat
 
         default:
             if let op = opTable[keyCode] {
                 // Transition to new calculator state based on operation
                 undoStack.push(state)
-                state.acceptTextEntry()
                 
                 if let newState = op.transition( state ) {
                     // Operation has produced a new state

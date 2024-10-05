@@ -87,8 +87,13 @@ struct CalcState {
     // Data entry state
     var entryMode: Bool = false
     var exponentEntry: Bool = false
+    var decimalSeen: Bool = false
+    var negativeSign: Bool = false
+    var digitCount: Int = 0
     var entryText: String = ""
     var exponentText: String = ""
+    
+    let digits: Set<Character> = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
     
     mutating func convertX( toTag: TypeTag ) -> Bool {
         if let seq = unitConvert( from: Xt, to: toTag ) {
@@ -161,39 +166,91 @@ struct CalcState {
     // *** Data Entry Functions ***
     
     mutating func clearEntry() {
-        self.entryMode = false
-        self.exponentEntry = false
-        self.entryText.removeAll(keepingCapacity: true)
-        self.exponentText.removeAll(keepingCapacity: true)
+        entryMode = false
+        exponentEntry = false
+        decimalSeen = false
+        negativeSign = false
+        digitCount = 0
+        entryText.removeAll(keepingCapacity: true)
+        exponentText.removeAll(keepingCapacity: true)
         
         logM.debug( "ClearEntry" )
     }
 
     mutating func startTextEntry(_ str: String ) {
-        self.clearEntry()
-        self.entryMode = true
-        self.entryText = str
+        clearEntry()
+        entryMode = true
+        entryText = str
+        digitCount = 1
+        decimalSeen = entryText.contains(".")
         
         logM.debug("StartTextEntry: \(str)")
     }
     
     mutating func startExpEntry() {
-        self.appendTextEntry("×10")
-        self.exponentText = ""
-        self.exponentEntry = true
+        appendTextEntry("×10")
+        exponentText = ""
+        exponentEntry = true
     }
     
     mutating func flipTextSign() {
-        if self.entryText.starts( with: "-") {
-            self.entryText.removeFirst()
+        if entryText.starts( with: "-") {
+            entryText.removeFirst()
+            negativeSign = false
         }
         else {
-            self.entryText.insert( "-", at: self.entryText.startIndex )
+            entryText.insert( "-", at: entryText.startIndex )
+            negativeSign = true
+        }
+    }
+    
+    mutating func recommaEntry() {
+        // Func is a noop if data entry contains a decimal point
+        if !decimalSeen {
+            if negativeSign {
+                // Temporarily remove the negative sign
+                entryText.removeFirst()
+            }
+            
+            // Remove all commas
+            entryText.removeAll( where: { $0 == "," })
+            
+            if digitCount > 3 {
+                // Work with string as array
+                var seq = Array(entryText)
+                
+                let commaCount = (digitCount - 1) / 3
+                
+                for ix in 1...commaCount {
+                    seq.insert(",", at: (digitCount-1) % 3 + 1 + (ix-1)*4 )
+                }
+                
+                // restore the data string from array
+                entryText = String(seq)
+            }
+            
+            if negativeSign {
+                // reinsert the negative sign if required
+                entryText.insert( "-", at: entryText.startIndex )
+            }
         }
     }
     
     mutating func appendTextEntry(_ str: String ) {
-        self.entryText += str
+        if str == "." {
+            if !decimalSeen {
+                entryText += str
+                decimalSeen = true
+            }
+        }
+        else if digits.contains(str) {
+            entryText += str
+            digitCount += 1
+            recommaEntry()
+        }
+        else {
+            entryText += str
+        }
         
         let txt = self.entryText
         logM.debug( "AppendTextEntry: '\(str)' -> '\(txt)'")
@@ -206,9 +263,27 @@ struct CalcState {
         logM.debug( "AppendExponentEntry: '\(str)' -> '\(txt)'")
     }
     
+    mutating func backspaceEntry() {
+        if !entryText.isEmpty {
+            let ch = entryText.removeLast()
+            
+            if ch == "." {
+                decimalSeen = false
+            }
+            else if digits.contains(ch) {
+                digitCount -= 1
+                recommaEntry()
+            }
+            
+            if entryText.isEmpty || entryText == "-" {
+                clearEntry()
+            }
+        }
+    }
+    
     mutating func acceptTextEntry() {
-        if self.entryMode {
-            var num: String = self.entryText
+        if entryMode {
+            var num: String = entryText
             
             logM.debug( "AcceptTextEntry: \(num)")
             
@@ -216,6 +291,9 @@ struct CalcState {
                 /// Eliminate 'x10'
                 num.removeLast(3)
             }
+            
+            // Remove all commas
+            num.removeAll( where: { $0 == "," })
 
             if exponentEntry && !exponentText.isEmpty {
                 /// Exponential entered

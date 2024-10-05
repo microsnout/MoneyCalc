@@ -25,7 +25,7 @@ extension View {
 }
 
 enum PadCode: Int {
-    case padDigits = 0, padOp, padEnter, padClear, padUnit, padFn0, padFmt, padLog, padSin
+    case padDigits = 0, padOp, padEnter, padClear, padUnit, padFn0, padFn1, padFmt, padLog, padSin
     
     var spec: PadSpec? {
         PadSpec.specList[self]
@@ -125,8 +125,21 @@ struct CalculatorView: View {
                 Key(.cos, "cos"),
                 Key(.tan, "tan"),
                 Key(.log, "log..", fontSize: 14, popup: .padLog),
-                Key(.e,   "e", fontSize: 18),
+                Key(.ln,   "ln"),
                 Key(.pi,  "\u{1d70b}", fontSize: 20)
+            ],
+        fontSize: 14.0
+    )
+    
+    let fn1RowSpec = PadSpec (
+        pc: .padFn1 ,
+        cols: 6,
+        keys: [ Key(.noop, " "),
+                Key(.noop, " "),
+                Key(.noop, " "),
+                Key(.tenExp,   "10^x"),
+                Key(.eExp, "e^x"),
+                Key(.e,    "e")
             ],
         fontSize: 14.0
     )
@@ -230,6 +243,10 @@ struct CalculatorView: View {
                         
                         Keypad( popPad: $popPad, ns: nsPopPad,
                                     keySpec: skSpec, padSpec: unitRowSpec, keyPressHandler: model )
+                            .padding( .vertical, 1 )
+                        
+                        Keypad( popPad: $popPad, ns: nsPopPad,
+                                    keySpec: skSpec, padSpec: fn1RowSpec, keyPressHandler: model )
                             .padding( .vertical, 1 )
                         
                         Keypad( popPad: $popPad, ns: nsPopPad,

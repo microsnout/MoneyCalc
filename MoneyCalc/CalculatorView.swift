@@ -137,9 +137,9 @@ struct CalculatorView: View {
         keys: [ Key(.noop, " "),
                 Key(.noop, " "),
                 Key(.noop, " "),
-                Key(.tenExp,   "10^x"),
-                Key(.eExp, "e^x"),
-                Key(.e,    "e")
+                Key(.tenExp, image: .tenx),
+                Key(.eExp,   image: .ex),
+                Key(.e,      image: .e)
             ],
         fontSize: 14.0
     )
